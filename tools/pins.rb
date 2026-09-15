@@ -6,6 +6,7 @@
 #
 #   ruby tools/pins.rb <triplet> <tool-platform> [--env]
 #   ruby tools/pins.rb --release
+#   ruby tools/pins.rb --installer-env <triplet>
 #
 # Press mode:
 #   <triplet>        the feedstock triplet (aarch64-macos,
@@ -18,11 +19,25 @@
 # Release mode (--release): emits the flat keys the release notes need
 # (versions + release tags), no per-platform selection.
 #
+# Installer mode (--installer-env): the installer legs' env (spec 16 §7) —
+# the product binds + the four PATH tools' asset names and sha256 pins for
+# the leg's triplet (aarch64-macos, x86_64-macos; x86_64-windows-ucrt maps
+# for the parked MSI leg). Never touches the payload slice pins: the seed
+# resolves the metanorma payload from the feedstock REGISTRY at install
+# time, and x86_64-macos has no slice pins in versions.yaml (the press
+# matrix never builds one) — resolving slices here would fail the leg on
+# an input it does not consume.
+#
 # With --env the output is KEY=VALUE lines (append to $GITHUB_ENV);
 # without it the pairs print as shell export lines. Unknown triplet /
 # missing pin is a named error, never a guess (spec 00 §9).
 
 require "yaml"
+
+# Native windows ruby terminates text-mode lines with CRLF and every
+# consumer (GITHUB_ENV, bash `read`) keeps the \r — a tainted value
+# malforms downstream steps. binmode is a no-op on POSIX.
+$stdout.binmode
 
 def die(msg)
   warn "pins.rb: #{msg}"
@@ -55,8 +70,67 @@ if ARGV.include?("--release")
   exit 0
 end
 
-triplet = ARGV[0] or die "usage: pins.rb <triplet> <tool-platform> [--env] | pins.rb --release"
-tool = ARGV[1] or die "usage: pins.rb <triplet> <tool-platform> [--env] | pins.rb --release"
+if ARGV[0] == "--installer-env"
+  itriplet = ARGV[1] or die "usage: pins.rb --installer-env <triplet>"
+  # Installer-leg triplet → tebako toolchain asset platform (the press
+  # matrix carries the two as separate columns; the installer matrix is
+  # the two macOS triplets, windows-ucrt64 mapping for the parked MSI
+  # leg — its tebako/tebako-shim pins land in versions.yaml at unpark).
+  itool = {
+    "aarch64-macos" => "macos-arm64",
+    "x86_64-macos" => "macos-x86_64",
+    "x86_64-windows-ucrt" => "windows-ucrt64",
+  }[itriplet] or die "pins.rb: no installer leg for triplet #{itriplet}"
+
+  inst = doc.fetch("installers")
+  iversion = tebako.fetch("version")
+  iexe = itool.start_with?("windows") ? ".exe" : ""
+  iasset = ->(name) { "#{name}-#{iversion}-#{itool}#{iexe}" }
+  isha = lambda do |name|
+    tebako.dig("sha256", name, itool) or
+      die "versions.yaml: no tebako.sha256.#{name}.#{itool} pin"
+  end
+
+  ipairs = {
+    "TRIPLET" => itriplet,
+    "HOST_ID" => itool,
+    "PKG_VERSION" => package.fetch("version"),
+    "TEBAKO_VERSION" => iversion,
+    "TEBAKO_RELEASE" => tebako.fetch("release"),
+    # The four PATH tools the installer stages (spec 16 §7); the pins
+    # double as the sign-then-hash anchors — the release's bytes are
+    # already signed, so the pin is exactly the fragment the ci script
+    # re-verifies its staging against.
+    "TEBAKO_ASSET" => iasset.call("tebako"),
+    "TEBAKO_SHA256" => isha.call("tebako"),
+    "SHIM_ASSET" => iasset.call("tebako-shim"),
+    "SHIM_SHA256" => isha.call("tebako-shim"),
+    "TFS_ASSET" => iasset.call("tfs"),
+    "TFS_SHA256" => isha.call("tfs"),
+    "PKG_ASSET" => iasset.call("tebako-pkg"),
+    "PKG_SHA256" => isha.call("tebako-pkg"),
+    "PRODUCT_NAME" => inst.fetch("product_name"),
+    "MANUFACTURER" => inst.fetch("manufacturer"),
+    "ORG_ID" => inst.fetch("org_id"),
+    "INSTALL_ROOT" => inst.fetch("install_root"),
+    "MSI_UPGRADE_CODE" => inst.fetch("msi_upgrade_code"),
+    "TEBAKO_INSTALLER_REF" => inst.fetch("installer_ref"),
+    # The web-bootstrapper seed (spec 16 §7): the product's same-named
+    # registry payload, installed from the feedstock registry at install
+    # time; the warm dispatches it once so the runtime lands in the
+    # root-owned machine home — a user dispatch is read-only after the
+    # warm (the seed runs no timeout: bare `metanorma` is bounded
+    # print-and-exit).
+    "BOOTSTRAP_REGISTRY" => inst.fetch("registry"),
+    "BOOTSTRAP_PAYLOADS" => package.fetch("name"),
+    "BOOTSTRAP_WARM" => package.fetch("name"),
+  }
+  ipairs.each { |k, v| puts "#{k}=#{v}" }
+  exit 0
+end
+
+triplet = ARGV[0] or die "usage: pins.rb <triplet> <tool-platform> [--env] | pins.rb --release | pins.rb --installer-env <triplet>"
+tool = ARGV[1] or die "usage: pins.rb <triplet> <tool-platform> [--env] | pins.rb --release | pins.rb --installer-env <triplet>"
 
 tool_sha = lambda do |name|
   tebako.dig("sha256", name, tool) or

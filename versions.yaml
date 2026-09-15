@@ -10,8 +10,11 @@
 # Grammar (schema_version 1):
 #   tebako.version / .release   — the tamatebako/tebako toolchain release
 #   tebako.sha256.<tool>.<tool-platform>   — digest of the release asset
-#       <tool>-<version>.<tool-platform>[.exe]; tool platforms:
-#       macos-arm64, linux-gnu-x86_64, windows-ucrt64
+#       <tool>-<version>-<tool-platform>[.exe]; tools: tebako-pkg,
+#       tebako-bootstrap, tfs (the press legs), tebako + tebako-shim (the
+#       installer legs stage the four PATH tools — spec 16 §7; their
+#       macos-* pins live here too); tool platforms: macos-arm64,
+#       macos-x86_64, linux-gnu-x86_64, windows-ucrt64
 #   runtime                       — the tebako-runtime-ruby line the
 #       package resolves at first run (lean: downloaded once per machine,
 #       sha256-verified against the release's own manifest/SHA256SUMS.txt)
@@ -33,6 +36,7 @@ tebako:
   sha256:
     tebako-pkg:
       macos-arm64: 5d93c27cc7ee51b87a023327cf78bbddb0a8ddf7dd831a49e45fcc2e301321c8
+      macos-x86_64: 65b852b6fe72618344a605852068f841a6fb367eed5aa1eee98b24087cf3b11f
       linux-gnu-x86_64: 80fe52205365325e76f07b27ae38522da33994fd91162369ba7b02f63b54f066
       windows-ucrt64: 244ec46e68722909c945c1f9f85cda966b0c58fc8fde629d5c3870d84a9ed882
     tebako-bootstrap:
@@ -41,8 +45,20 @@ tebako:
       windows-ucrt64: d49887fff9dcf3689ea837e3471ccd3e9b43f1f72820278121412109db5ec7c2
     tfs:
       macos-arm64: 7d1aeb18258beb8c19ead69fa5fb72e65011d0c3277c2ce4c3e521282d15c91b
+      macos-x86_64: d7399848287b0feef163dbb3c3ce7f1819fb0cdb888d5a73573f0c014d519915
       linux-gnu-x86_64: 74e481a76e0b70f80eaabbda77a8b0e5a10fd8300bcf382ee7e03b07be50bef8
       windows-ucrt64: 8e015a285899ac42164f46341ab4e2f5039eb782b46cf49cb6c9cade4cd68521
+    # The installer legs (spec 16 §7) stage the FOUR PATH tools — tebako,
+    # tebako-shim, tfs, tebako-pkg — so the CLI + dispatcher pins join the
+    # press set here. macOS only: the live installer legs are the two pkg
+    # arch legs; the windows-ucrt64 pins land with the parked MSI leg's
+    # unpark (pins.rb fails CLOSED on a missing pin, named).
+    tebako:
+      macos-arm64: a588282aa712b09c3d4e16c83eddd1878be735bae0faa7dbe3fb0da4b074d665
+      macos-x86_64: f42379a427ca11f50f9f8cddeaca7a01b3adb40e55f306d5eb2066614e4ae3d0
+    tebako-shim:
+      macos-arm64: 75c96eddb9a8a194dbb50be55c680d1c769884bcc2d2f5d835145ffd1e9ebccd
+      macos-x86_64: b85cd0242cc173cba7b96ea9a628ba077ce36d3371141ce928ea06c8850b6871
 
 runtime:
   # The runtime reference every package entry carries:
@@ -76,6 +92,37 @@ package:
   # tag is v<this>). The composition's truth lives in the L2 package
   # manifest + the release's SHA256SUMS, not in an invented composite.
   version: 1.16.9
+
+# The installer containers (spec 16 §7): the product also ships as a
+# system pkg (macOS; the MSI parks with the windows press leg — see
+# build.yml), built by tamatebako/tebako's ci scripts + templates, fetched
+# at installer_ref (the SSOT — never forked). Bound as a WEB BOOTSTRAPPER:
+# the installer stages the four PATH tools (the tebako/tebako-shim/tfs/
+# tebako-pkg pins above), runs <root>/bootstrap-seed.* at install time
+# (best-effort — an offline machine re-runs it later) to install the
+# metanorma payload from the feedstock registry, WARMS its runtime into
+# the root-owned machine home (a user's dispatch is read-only after the
+# warm), and authors the <root>/home/shims store-grammar marker
+# (spec 05 §3.1) so the bundle's tools resolve the bundle home
+# zero-config.
+installers:
+  product_name: metanorma
+  manufacturer: Metanorma
+  org_id: org.metanorma
+  install_root: /opt/metanorma # the pkg's root; the MSI roots at Program Files\metanorma
+  # The seed installs the same-named payload from the FEEDSTOCK's registry
+  # (payloads flow from tebako-packages/metanorma's published releases —
+  # never from this repo's).
+  registry: tfs:github:tebako-packages/metanorma
+  # The installer machinery pin: a tamatebako/tebako main sha (the
+  # spec 16 §7 web-bootstrapper hook). The v2.8.4 tag carrying it has
+  # since been cut (the ci/ + templates/ content is identical) — re-pin
+  # to the tag on the next machinery bump.
+  installer_ref: a09081fe40c2fd6838298c7e3a9dff20d014d1a4
+  # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
+  # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
+  # the (parked) MSI leg consumes it.
+  msi_upgrade_code: 57CE2E16-2EA0-4B1C-AD8F-7E66F82D0EAA
 
 payloads:
   - name: metanorma
