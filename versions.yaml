@@ -1,8 +1,8 @@
 # =============================================================================
-# versions.yaml — the single source of truth for every byte packed-mn
+# versions.yaml — the single source of truth for every byte packed-metanorma
 # assembles (spec 00 §10: one owner; everything else flows from here).
 #
-# packed-mn compiles nothing: every input is a published, sha256-pinned
+# packed-metanorma compiles nothing: every input is a published, sha256-pinned
 # release artifact. Bumping ANY input is a one-line edit of this file
 # (the release trigger flow writes it; the workflow reads it; nothing
 # else in the repo hardcodes a version or a digest).
@@ -48,7 +48,7 @@ runtime:
   # The runtime reference every package entry carries:
   #   ruby@3.3.12;tebako=0.16.22;image
   # ruby stays on the 3.3 line ON PURPOSE: the benchmark comparison vs the
-  # old (v1-tebako) packed-mn executables holds the interpreter line fixed
+  # old (v1-tebako) packed-metanorma executables holds the interpreter line fixed
   # (owner decision 2026-08-26 — do NOT bump to 4.0.6 here).
   # 0.16.22 is REQUIRED by the spec-32 edge, not a preference: it is the
   # factory re-cut on the tebako v2.2.0 link unit (the schema_minor-5

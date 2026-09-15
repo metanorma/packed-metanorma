@@ -1,4 +1,4 @@
-= Acceptance document for the packed-mn ISO PDF pipeline
+= Acceptance document for the packed-metanorma ISO PDF pipeline
 :docnumber: 99999
 :doctype: international-standard
 :docstage: 60
@@ -13,7 +13,7 @@
 
 == Scope
 
-This document exists to prove that the packed-mn v2 stack compiles an
+This document exists to prove that the packed-metanorma v2 stack compiles an
 ISO-flavour document to PDF end to end: jing schema validation, the
 fontist font pipeline against the host `~/.fontist` cache (fonts from
 the public fontist formulas, downloaded at compile time), and

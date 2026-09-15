@@ -1,6 +1,6 @@
-= packed-mn — Metanorma single-executable packages (tebako v2)
+= packed-metanorma — Metanorma single-executable packages (tebako v2)
 
-image:https://github.com/metanorma/packed-mn/workflows/build/badge.svg["Build Status", link="https://github.com/metanorma/packed-mn/actions/workflows/build.yml"]
+image:https://github.com/metanorma/packed-metanorma/workflows/build/badge.svg["Build Status", link="https://github.com/metanorma/packed-metanorma/actions/workflows/build.yml"]
 
 == Purpose
 
@@ -31,7 +31,7 @@ A package is up to three independently distributable parts, glued by the
 * *Runtime* — the Ruby interpreter executable plus its environment image
   (stdlib + gems), two artifacts downloaded once per machine into the
   shared `~/.tebako` cache, sha256-verified, mounted (never extracted);
-* *Payload slices* — bare `.tfs` filesystem images. packed-mn carries
+* *Payload slices* — bare `.tfs` filesystem images. packed-metanorma carries
   three: the `metanorma` app itself, an OpenJDK runtime (for mn2pdf), and
   Inkscape (for SVG processing).
 
