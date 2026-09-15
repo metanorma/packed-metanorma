@@ -3,9 +3,11 @@ name: build
 # Tebako v2 assembly for packed-metanorma. One pipeline: fetch (sha256-pinned
 # tebako toolchain + payload slices) → assemble (tebako-pkg bundle) →
 # validate (structural gates + smoke + PDF compile) → publish (release +
-# downstream dispatches). Replaces the six retired v1 workflows. Inputs live
-# in versions.yaml (SSOT); the package manifest template lives in
-# package/package-manifest.yaml.
+# downstream dispatches) → installer containers (spec 16 §7: the macOS pkg
+# legs build + install-rehearse on every run and ship signed+notarized on
+# armed tags; the MSI leg parks with the windows press leg). Replaces the
+# six retired v1 workflows. Inputs live in versions.yaml (SSOT); the
+# package manifest template lives in package/package-manifest.yaml.
 #
 # Both former upstream blockers are FIXED by the pins in versions.yaml:
 #  - the region-mounts gap (TEBAKO_TFS_MOUNTS bare `image:mount` pairs
@@ -705,6 +707,15 @@ jobs:
           cp stage/dist-x86_64-linux-gnu/metanorma-linux-x86_64.tgz* rel/
           ls -l rel
       - name: Release notes
+        env:
+          # The pkg installer section lists assets the installer-pkg legs
+          # attach AFTER this release exists (they order after it), and
+          # only on signing-armed runs — an unsigned installer container
+          # never ships. The notes themselves therefore gate on the two
+          # Apple gates the machinery requires together (spec 31 §5a: the
+          # Installer cert beside the §5 notary plane).
+          APPLE_INSTALLER_SIGNING_ENABLED: ${{ vars.APPLE_INSTALLER_SIGNING_ENABLED }}
+          APPLE_SIGNING_ENABLED: ${{ vars.APPLE_SIGNING_ENABLED }}
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
@@ -742,6 +753,23 @@ jobs:
           | macOS (Apple Silicon) | metanorma-darwin-arm64.tgz |
           | Linux (x86_64) | metanorma-linux-x86_64.tgz |
           EOF
+          if [ "${APPLE_INSTALLER_SIGNING_ENABLED:-}" = "true" ] && [ "${APPLE_SIGNING_ENABLED:-}" = "true" ]; then
+          cat >> RELEASE-NOTES.md <<EOF
+
+          ## System installers (macOS)
+
+          Signed + notarized pkg installers (spec 16 §7: the tebako tool
+          set on PATH, the metanorma payload seeded into the machine-wide
+          home and its runtime warmed at install time — first run needs no
+          downloads). Built and install-rehearsed by the installer-pkg
+          legs; they attach to this release shortly after it exists.
+
+          | Platform | Asset |
+          |---|---|
+          | macOS installer (Apple Silicon) | metanorma-setup-$PKG_VERSION-macos-arm64.pkg |
+          | macOS installer (Intel) | metanorma-setup-$PKG_VERSION-macos-x86_64.pkg |
+          EOF
+          fi
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -764,3 +792,322 @@ jobs:
               -f "client_payload[ref]=${GITHUB_REF_NAME}" \
               -X POST
           done
+
+
+  # ---- the installer containers (spec 16 §7) -------------------------------
+  # The product also ships as a system pkg (macOS; the MSI parks below) —
+  # the CLIENT build of tamatebako/tebako's installer templates, fetched at
+  # versions.yaml's installers.installer_ref (the SSOT; never forked).
+  # Bound as a web bootstrapper: the installer stages the four PATH tools,
+  # seeds the metanorma payload from the feedstock registry, and WARMS its
+  # runtime at install time (the bundle home is root-owned; a user's
+  # dispatch is read-only after the warm). Build + install rehearsal run on
+  # every push/PR — the rehearsal IS the acceptance (registry registered,
+  # payload + runtime cached); the containers attach to the tag release
+  # only when the signing plane is armed (unsigned installer containers
+  # never ship). The legs order AFTER release when it runs so the release
+  # exists to receive the upload; release is skipped on non-tag runs and
+  # the legs rehearse against the live registry.
+
+  installer-pkg:
+    name: installer (pkg, ${{ matrix.host_id }})
+    needs: [release]
+    if: ${{ always() && !cancelled() && (needs.release.result == 'success' || needs.release.result == 'skipped') }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # One macOS triplet today: aarch64. The Intel leg parks until the
+        # feedstock ships an x86_64-macos payload (the seed installs
+        # metanorma from the feedstock registry, which today carries
+        # aarch64-macos, x86_64-linux-gnu, x86_64-windows-ucrt); it
+        # re-joins with the payload:
+        #   - { triplet: x86_64-macos,  host_id: macos-x86_64, runner: macos-15-intel }
+        include:
+          - { triplet: aarch64-macos, host_id: macos-arm64,  runner: macos-latest }
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer env (versions.yaml is the SSOT)
+        run: ruby tools/pins.rb --installer-env "${{ matrix.triplet }}" >> "$GITHUB_ENV"
+
+      - name: Fetch the pinned tebako tool set (sha256-verified)
+        run: |
+          set -euo pipefail
+          mkdir -p staged frags
+          base="https://github.com/tamatebako/tebako/releases/download/$TEBAKO_RELEASE"
+          curl -fsSLO --retry 5 --retry-all-errors --retry-delay 3 --output-dir staged "$base/SHA256SUMS"
+          for tool in tebako tebako-shim tfs tebako-pkg; do
+            case "$tool" in
+              tebako) va=TEBAKO_ASSET; vs=TEBAKO_SHA256 ;;
+              tebako-shim) va=SHIM_ASSET; vs=SHIM_SHA256 ;;
+              tfs) va=TFS_ASSET; vs=TFS_SHA256 ;;
+              tebako-pkg) va=PKG_ASSET; vs=PKG_SHA256 ;;
+            esac
+            asset="${!va}"; sha="${!vs}"
+            curl -fsSLO --retry 5 --retry-all-errors --retry-delay 3 --output-dir staged "$base/$asset"
+            echo "$sha  staged/$asset" | shasum -a 256 -c -
+            got="$(grep "  $asset\$" staged/SHA256SUMS | cut -d' ' -f1 || true)"
+            [ "$got" = "$sha" ] || { echo "::error::pin mismatch for $asset vs the release's SHA256SUMS: versions.yaml=$sha release=${got:-ABSENT}"; exit 1; }
+            mv "staged/$asset" "staged/$tool-$PKG_VERSION-$HOST_ID"
+            chmod +x "staged/$tool-$PKG_VERSION-$HOST_ID"
+            echo "$sha" > "frags/$tool-$HOST_ID.sha256"
+          done
+          echo "staged + frag-anchored: tebako tebako-shim tfs tebako-pkg ($TEBAKO_RELEASE)"
+
+      - name: Fetch the installer ci + templates at the pinned tebako ref
+        uses: actions/checkout@v4
+        with:
+          repository: tamatebako/tebako
+          ref: ${{ env.TEBAKO_INSTALLER_REF }}
+          path: tebako-ci
+          sparse-checkout: |
+            ci
+            templates
+
+      # The spec 31 §5a gate: Developer ID **Installer** cert (a DIFFERENT
+      # cert from the Application one). Disarmed (the default) builds +
+      # rehearses unsigned; armed requires the org secrets (owner act).
+      - name: Set up Apple installer signing (spec 31 §5a enablement gate)
+        id: signgate
+        working-directory: tebako-ci
+        env:
+          APPLE_INSTALLER_SIGNING_ENABLED: ${{ github.event_name == 'pull_request' && 'false' || vars.APPLE_INSTALLER_SIGNING_ENABLED }}
+          APPLE_SIGNING_ENABLED: ${{ github.event_name == 'pull_request' && 'false' || vars.APPLE_SIGNING_ENABLED }}
+          APPLE_DEVELOPER_ID_INSTALLER_P12: ${{ secrets.APPLE_DEVELOPER_ID_INSTALLER_P12 }}
+          APPLE_DEVELOPER_ID_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_INSTALLER_P12_PASSWORD }}
+        run: bash ci/macos-sign-setup-installer.sh
+
+      # Build → [armed] productsign + notarize + STAPLE → ship gates → the
+      # install rehearsal (always; asserts the seed's effects — registry
+      # registered, payloads cached, runtimes warmed). All in-script.
+      - name: Build + sign + notarize + rehearse the pkg
+        working-directory: tebako-ci
+        env:
+          VERSION: ${{ env.PKG_VERSION }}
+          PLATFORM: ${{ env.HOST_ID }}
+          SRC_DIR: ${{ github.workspace }}/staged
+          FRAG_DIR: ${{ github.workspace }}/frags
+          APPLE_INSTALLER_SIGNING_ENABLED: ${{ github.event_name == 'pull_request' && 'false' || vars.APPLE_INSTALLER_SIGNING_ENABLED }}
+          APPLE_ASC_KEY_P8: ${{ secrets.APPLE_ASC_KEY_P8 }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: bash ci/macos-pkg-build.sh
+
+      - name: Upload the pkg to the tag release (armed tags only)
+        # No publish input here — the tag push IS the publish signal (the
+        # release job's own condition); the arm gate keeps unsigned
+        # containers off it.
+        if: steps.signgate.outputs.armed == 'true' && startsWith(github.ref, 'refs/tags/v')
+        run: gh release upload "${{ github.ref_name }}" "tebako-ci/out/${PRODUCT_NAME}-setup-${PKG_VERSION}-${HOST_ID}.pkg" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rehearsal evidence (unsigned container — CI inspection only)
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-pkg-${{ matrix.host_id }}
+          path: tebako-ci/out/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # installer-msi PARKED (spec 32): the MSI leg unparks with the windows
+  # press leg — versions.yaml's xml2rfc entry has no x86_64-windows-ucrt
+  # asset (no windows xml2rfc payload from the POSIX-only feedstock, no
+  # windows python runtime from the factory), so the windows product story
+  # is incomplete and a windows installer container waits with it (see the
+  # press matrix comment). The windows-signing environment on this repo is
+  # ALREADY armed (Azure Trusted Signing: account metanorma-ci-signing,
+  # profile metanorma-public-trust — owner-provisioned, do not recreate;
+  # the Entra OIDC subject is the immutable repo-ID form, so the repo
+  # rename to packed-metanorma did not break it). At unpark: uncomment the
+  # job and add the windows-ucrt64 tebako/tebako-shim pins to versions.yaml
+  # (pins.rb --installer-env fails CLOSED, named, until then).
+  #
+  # installer-msi:
+  #   name: installer (MSI, windows-ucrt64)
+  #   needs: [release]
+  #   if: ${{ always() && !cancelled() && (needs.release.result == 'success' || needs.release.result == 'skipped') }}
+  #   permissions:
+  #     contents: write
+  #     # id-token:write is the spec 34 §3 OIDC boundary — the
+  #     # windows-signing environment federates this leg's Azure token.
+  #     id-token: write
+  #   environment: windows-signing
+  #   runs-on: windows-2022
+  #   defaults:
+  #     run:
+  #       shell: bash        # Git Bash; the rehearsal step opts into pwsh
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Installer env (versions.yaml is the SSOT)
+  #       run: ruby tools/pins.rb --installer-env x86_64-windows-ucrt >> "$GITHUB_ENV"
+  #
+  #     - name: Fetch the pinned tebako tool set (sha256-verified)
+  #       # The 4 PATH tools, digest-pinned per versions.yaml. The pins
+  #       # double as the sign-then-hash anchors: the product release's
+  #       # bytes are ALREADY signed, so the pin is exactly the fragment the
+  #       # ci script verifies its staging against.
+  #       run: |
+  #         set -euo pipefail
+  #         mkdir -p staged frags
+  #         base="https://github.com/tamatebako/tebako/releases/download/$TEBAKO_RELEASE"
+  #         curl -fsSLO --retry 5 --retry-all-errors --retry-delay 3 --output-dir staged "$base/SHA256SUMS"
+  #         for tool in tebako tebako-shim tfs tebako-pkg; do
+  #           case "$tool" in
+  #             tebako) va=TEBAKO_ASSET; vs=TEBAKO_SHA256 ;;
+  #             tebako-shim) va=SHIM_ASSET; vs=SHIM_SHA256 ;;
+  #             tfs) va=TFS_ASSET; vs=TFS_SHA256 ;;
+  #             tebako-pkg) va=PKG_ASSET; vs=PKG_SHA256 ;;
+  #           esac
+  #           asset="${!va}"; sha="${!vs}"
+  #           curl -fsSLO --retry 5 --retry-all-errors --retry-delay 3 --output-dir staged "$base/$asset"
+  #           echo "$sha  staged/$asset" | sha256sum -c -
+  #           got="$(grep "  $asset\$" staged/SHA256SUMS | cut -d' ' -f1 || true)"
+  #           [ "$got" = "$sha" ] || { echo "::error::pin mismatch for $asset vs the release's SHA256SUMS: versions.yaml=$sha release=${got:-ABSENT}"; exit 1; }
+  #           sfx=""; case "$asset" in *.exe) sfx=.exe ;; esac
+  #           mv "staged/$asset" "staged/$tool-$PKG_VERSION-$HOST_ID$sfx"
+  #           chmod +x "staged/$tool-$PKG_VERSION-$HOST_ID$sfx"
+  #           echo "$sha" > "frags/$tool-$HOST_ID.sha256"
+  #         done
+  #         echo "staged + frag-anchored: tebako tebako-shim tfs tebako-pkg ($TEBAKO_RELEASE)"
+  #
+  #     - name: Fetch the installer ci + templates at the pinned tebako ref
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: tamatebako/tebako
+  #         ref: ${{ env.TEBAKO_INSTALLER_REF }}
+  #         path: tebako-ci
+  #         sparse-checkout: |
+  #           ci
+  #           templates
+  #
+  #     - name: Arm gate — windows signing (spec 34 §4)
+  #       id: signgate
+  #       working-directory: tebako-ci
+  #       env:
+  #         # PRs never arm the signing plane (rehearsal bytes never get the
+  #         # production profile); a tag run arms it when the repo var is
+  #         # set (owner act — needs the Entra federated credential).
+  #         WINDOWS_SIGNING_ENABLED: ${{ github.event_name == 'pull_request' && 'false' || vars.WINDOWS_SIGNING_ENABLED }}
+  #         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  #         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  #         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  #         AZURE_ENDPOINT: ${{ vars.AZURE_ENDPOINT }}
+  #         AZURE_SIGNING_ACCOUNT_NAME: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+  #         AZURE_SIGNING_CERT_PROFILE: ${{ vars.AZURE_SIGNING_CERT_PROFILE }}
+  #       run: bash ci/windows-sign-gate.sh
+  #
+  #     - name: Set up WiX v5
+  #       run: |
+  #         set -euo pipefail
+  #         dotnet tool install --global wix --version 5.0.2
+  #         echo "$USERPROFILE/.dotnet/tools" >> "$GITHUB_PATH"
+  #         wix --version
+  #
+  #     - name: Build the MSI (unsigned — the Azure step signs in place when armed)
+  #       working-directory: tebako-ci
+  #       env:
+  #         VERSION: ${{ env.PKG_VERSION }}
+  #         PLATFORM: ${{ env.HOST_ID }}
+  #         SRC_DIR: ${{ github.workspace }}/staged
+  #         FRAG_DIR: ${{ github.workspace }}/frags
+  #       run: bash ci/windows-msi-build.sh build
+  #
+  #     - name: Azure login (OIDC, spec 34 §5)
+  #       if: steps.signgate.outputs.armed == 'true' && startsWith(github.ref, 'refs/tags/v')
+  #       uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2 (sha-pinned)
+  #       with:
+  #         client-id: ${{ secrets.AZURE_CLIENT_ID }}
+  #         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+  #         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  #
+  #     - name: Sign the MSI (Azure Artifact Signing signs MSI natively)
+  #       if: steps.signgate.outputs.armed == 'true' && startsWith(github.ref, 'refs/tags/v')
+  #       uses: Azure/artifact-signing-action@b443cf8ea4124818d2ea9f043cba29fc3ec47b16 # v1 (sha-pinned)
+  #       with:
+  #         endpoint: ${{ vars.AZURE_ENDPOINT }}
+  #         signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+  #         certificate-profile-name: ${{ vars.AZURE_SIGNING_CERT_PROFILE }}
+  #         files-folder: tebako-ci/out
+  #         files-folder-filter: msi
+  #         file-digest: SHA256
+  #         timestamp-rfc3161: http://timestamp.acs.microsoft.com
+  #         timestamp-digest: SHA256
+  #         description: metanorma installer (metanorma)
+  #
+  #     - name: Verify the MSI signature (armed only)
+  #       if: steps.signgate.outputs.armed == 'true' && startsWith(github.ref, 'refs/tags/v')
+  #       shell: pwsh
+  #       run: |
+  #         $ErrorActionPreference = 'Stop'
+  #         $msi = @(Get-ChildItem -Path 'tebako-ci/out' -Filter '*.msi' -File)
+  #         if ($msi.Count -ne 1) { Write-Host "::error::expected exactly 1 MSI under tebako-ci/out, found $($msi.Count)"; exit 1 }
+  #         $sig = Get-AuthenticodeSignature $msi[0].FullName
+  #         if ($sig.Status -ne 'Valid') { Write-Host "::error::Get-AuthenticodeSignature status '$($sig.Status)'"; exit 1 }
+  #         if ($null -eq $sig.TimeStamperCertificate) { Write-Host "::error::no TimeStamperCertificate on the MSI"; exit 1 }
+  #         Write-Host "MSI signed+timestamped: $($sig.SignerCertificate.Subject)"
+  #
+  #     - name: Install rehearsal (msiexec round-trip + the seed's effects)
+  #       shell: pwsh
+  #       run: |
+  #         $ErrorActionPreference = 'Stop'
+  #         $msi = @(Get-ChildItem -Path 'tebako-ci/out' -Filter '*.msi' -File)
+  #         if ($msi.Count -ne 1) { Write-Host "::error::expected exactly 1 MSI under tebako-ci/out"; exit 1 }
+  #         $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList '/i', $msi[0].FullName, '/qn', '/norestart', '/l*v', 'msi-install.log'
+  #         if ($p.ExitCode -ne 0) { Get-Content msi-install.log -Tail 60; Write-Host "::error::msiexec /i failed: $($p.ExitCode)"; exit 1 }
+  #         $root = "C:\Program Files\$env:PRODUCT_NAME"
+  #         & "$root\bin\tebako.exe" --version | Out-Host
+  #         if ($LASTEXITCODE -ne 0) { Write-Host "::error::installed tebako.exe --version failed"; exit 1 }
+  #         # The seed ran during install (deferred, SYSTEM): the registry is
+  #         # registered and every platform payload is cached into the bundle
+  #         # home. A missing effect = a broken seed = a red leg.
+  #         foreach ($pl in ($env:BOOTSTRAP_PAYLOADS -split ' ')) {
+  #           if (-not (Test-Path "$root\home\payloads\$pl")) {
+  #             Get-Content msi-install.log -Tail 80
+  #             Write-Host "::error::seed payload $pl missing under $root\home\payloads"; exit 1
+  #           }
+  #         }
+  #         # The warm: runtimes cached at install time, so a user dispatch is
+  #         # read-only against the machine home.
+  #         if (-not (Test-Path "$root\home\runtimes") -or @(Get-ChildItem "$root\home\runtimes" -Directory).Count -eq 0) {
+  #           Get-Content msi-install.log -Tail 80
+  #           Write-Host "::error::BOOTSTRAP_WARM bound but $root\home\runtimes is empty"; exit 1
+  #         }
+  #         # The zero-config seat (this job never sets TEBAKO_HOME): the shim
+  #         # copy under home\shims resolves the bundle home by the
+  #         # store-grammar marker and dispatches against the warm cache.
+  #         # `metanorma version` prints the stack list whose first line is
+  #         # "Metanorma <x.y.z>" — the dispatch-proof shape.
+  #         if (-not (Test-Path "$root\home\shims\metanorma.exe")) { Write-Host "::error::zero-config shim $root\home\shims\metanorma.exe missing"; exit 1 }
+  #         $out = & "$root\home\shims\metanorma.exe" version 2>&1 | Out-String
+  #         Write-Host $out
+  #         if ($LASTEXITCODE -ne 0 -or $out -notmatch 'Metanorma \d+\.\d+') { Write-Host "::error::zero-config metanorma dispatch failed"; exit 1 }
+  #         $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList '/x', $msi[0].FullName, '/qn', '/norestart'
+  #         if ($p.ExitCode -ne 0) { Write-Host "::error::msiexec /x failed: $($p.ExitCode)"; exit 1 }
+  #         # Uninstall removes the tools (bin) and the PATH rows; the seeded
+  #         # home stays by design (machine cache — a reinstall reuses it).
+  #         if (Test-Path "$root\bin") { Write-Host "::error::uninstall left $root\bin"; exit 1 }
+  #         Write-Host 'install rehearsal OK (install → seed effects → warm cache → zero-config dispatch → uninstall)'
+  #
+  #     - name: Upload the MSI to the tag release (armed tags only)
+  #       if: steps.signgate.outputs.armed == 'true' && startsWith(github.ref, 'refs/tags/v')
+  #       run: gh release upload "${{ github.ref_name }}" "tebako-ci/out/${PRODUCT_NAME}-setup-${PKG_VERSION}-windows-ucrt64.msi" --clobber
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #
+  #     - name: Rehearsal evidence (unsigned container — CI inspection only)
+  #       if: always() && !cancelled()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: installer-msi-windows-ucrt64
+  #         path: tebako-ci/out/
+  #         retention-days: 7
+  #         if-no-files-found: ignore
