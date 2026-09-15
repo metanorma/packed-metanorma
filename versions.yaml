@@ -31,34 +31,34 @@
 schema_version: 1
 
 tebako:
-  version: 2.2.0
-  release: v2.2.0
+  version: 2.8.4
+  release: v2.8.4
   sha256:
     tebako-pkg:
-      macos-arm64: 5d93c27cc7ee51b87a023327cf78bbddb0a8ddf7dd831a49e45fcc2e301321c8
-      macos-x86_64: 65b852b6fe72618344a605852068f841a6fb367eed5aa1eee98b24087cf3b11f
-      linux-gnu-x86_64: 80fe52205365325e76f07b27ae38522da33994fd91162369ba7b02f63b54f066
-      windows-ucrt64: 244ec46e68722909c945c1f9f85cda966b0c58fc8fde629d5c3870d84a9ed882
+      macos-arm64: 0cdc60495a240b05a4e8a309af256ba4994985ea708096e0a1b170d7ae7eaefb
+      macos-x86_64: a603d1c6f5276240093a268c73ad09a4b3135f1095fc09aa68d04c78cf5c0954
+      linux-gnu-x86_64: ced719fc6292863f388f220deaf58f4f986071346cc6636f041279e697471023
+      windows-ucrt64: fc6dffd43f71a401c9c83cfa8e1021fc96a29910901506a4fb9c4693234016cf
     tebako-bootstrap:
-      macos-arm64: e6ab3bac0c90e713a97753899fe26598b8d5378b1fc10d838c1a795ac198c106
-      linux-gnu-x86_64: 1fcfe66c834168c15cf1e07b6c539ec79ee332f828e40b8d3f246d2decb38923
-      windows-ucrt64: d49887fff9dcf3689ea837e3471ccd3e9b43f1f72820278121412109db5ec7c2
+      macos-arm64: 6dd9a235d6a06f3024f36d4f10ceb44a83c4c7fc3a26801d4fe334e9d50c3545
+      linux-gnu-x86_64: 122db9faf4aabad2b4502495afab5485bad7d42e6f270e3550a1f951439721b7
+      windows-ucrt64: 18c04a68ce5ce14564fe42b3f0722126fcb14cc4c4adb289f8758a05a756bbd1
     tfs:
-      macos-arm64: 7d1aeb18258beb8c19ead69fa5fb72e65011d0c3277c2ce4c3e521282d15c91b
-      macos-x86_64: d7399848287b0feef163dbb3c3ce7f1819fb0cdb888d5a73573f0c014d519915
-      linux-gnu-x86_64: 74e481a76e0b70f80eaabbda77a8b0e5a10fd8300bcf382ee7e03b07be50bef8
-      windows-ucrt64: 8e015a285899ac42164f46341ab4e2f5039eb782b46cf49cb6c9cade4cd68521
+      macos-arm64: 7c5387d7796afac2c774a32e50da3f3b2a1ca49152d2766c38d64a80161e3820
+      macos-x86_64: 20e57e637502ebeea4f02ebc55de8f1c5633611be22105e54f4429d1426d4902
+      linux-gnu-x86_64: 775ad6d513a335a52925dfce492e87940ac4a281cca0e40148c405140fb430cd
+      windows-ucrt64: a18fb19f0a95aa62427536bd6f4f461856cfc17517dafbd361b7bb65721b663d
     # The installer legs (spec 16 §7) stage the FOUR PATH tools — tebako,
     # tebako-shim, tfs, tebako-pkg — so the CLI + dispatcher pins join the
     # press set here. macOS only: the live installer legs are the two pkg
     # arch legs; the windows-ucrt64 pins land with the parked MSI leg's
     # unpark (pins.rb fails CLOSED on a missing pin, named).
     tebako:
-      macos-arm64: a588282aa712b09c3d4e16c83eddd1878be735bae0faa7dbe3fb0da4b074d665
-      macos-x86_64: f42379a427ca11f50f9f8cddeaca7a01b3adb40e55f306d5eb2066614e4ae3d0
+      macos-arm64: f471e21ef81c139f313345aa08725237d68dcf6715d6f6c18d46e4a890e04955
+      macos-x86_64: 3b43f0d57df9a597a368ae0dca7aa4bd448dab339f4c7de95ca74556f8a21dff
     tebako-shim:
-      macos-arm64: 75c96eddb9a8a194dbb50be55c680d1c769884bcc2d2f5d835145ffd1e9ebccd
-      macos-x86_64: b85cd0242cc173cba7b96ea9a628ba077ce36d3371141ce928ea06c8850b6871
+      macos-arm64: 906254b3a74452e1e2d92951d97fbdc4a8e996e39b0db20e94e4a5fe12daa4fb
+      macos-x86_64: 27ae761da830c5b5529ef55346979bf095f648f606883b78a56dffa48e7b1ebd
 
 runtime:
   # The runtime reference every package entry carries:
