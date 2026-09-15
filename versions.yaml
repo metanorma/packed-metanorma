@@ -115,10 +115,11 @@ installers:
   # never from this repo's).
   registry: tfs:github:tebako-packages/metanorma
   # The installer machinery pin: a tamatebako/tebako main sha (the
-  # spec 16 §7 web-bootstrapper hook). The v2.8.4 tag carrying it has
-  # since been cut (the ci/ + templates/ content is identical) — re-pin
-  # to the tag on the next machinery bump.
-  installer_ref: a09081fe40c2fd6838298c7e3a9dff20d014d1a4
+  # spec 16 §7 web-bootstrapper hook). 212b2cb carries the client-product
+  # rehearsal fix (#606 — the rehearsal asserts the toolset binary + the
+  # warmed shims, not bin/<product>); earlier shas fail every client
+  # product's rehearsal.
+  installer_ref: 212b2cb778debcb42da88f3ca6a74273c6656ca2
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the (parked) MSI leg consumes it.

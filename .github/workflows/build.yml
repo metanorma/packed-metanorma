@@ -818,13 +818,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The two macOS triplets. The Intel leg's seed installs metanorma
-        # from the feedstock registry, so it turns green with the
-        # feedstock's x86_64-macos payload (today the registry carries
-        # aarch64-macos, x86_64-linux-gnu, x86_64-windows-ucrt).
+        # One macOS triplet today: aarch64. The Intel leg parks until the
+        # feedstock ships an x86_64-macos payload (the seed installs
+        # metanorma from the feedstock registry, which today carries
+        # aarch64-macos, x86_64-linux-gnu, x86_64-windows-ucrt); it
+        # re-joins with the payload:
+        #   - { triplet: x86_64-macos,  host_id: macos-x86_64, runner: macos-15-intel }
         include:
           - { triplet: aarch64-macos, host_id: macos-arm64,  runner: macos-latest }
-          - { triplet: x86_64-macos,  host_id: macos-x86_64, runner: macos-15-intel }
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
