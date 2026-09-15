@@ -1,6 +1,6 @@
 name: build
 
-# Tebako v2 assembly for packed-mn. One pipeline: fetch (sha256-pinned
+# Tebako v2 assembly for packed-metanorma. One pipeline: fetch (sha256-pinned
 # tebako toolchain + payload slices) → assemble (tebako-pkg bundle) →
 # validate (structural gates + smoke + PDF compile) → publish (release +
 # downstream dispatches). Replaces the six retired v1 workflows. Inputs live

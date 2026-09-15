@@ -62,7 +62,7 @@ package:
   name: metanorma
   version: "@@VERSION@@"
   producer:
-    tool: packed-mn
+    tool: packed-metanorma
     tool_version: "2"
   created: "@@CREATED@@"
 entries:
