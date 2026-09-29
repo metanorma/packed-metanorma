@@ -50,19 +50,19 @@ Every byte the pipeline assembles is pinned in `versions.yaml`:
 | Input | Currently pinned
 
 | tebako toolchain (`tamatebako/tebako`)
-| v0.2.4 (`tebako-pkg`, `tebako-bootstrap`, `tfs` per platform)
+| v2.8.22 (`tebako-pkg`, `tebako-bootstrap`, `tfs` per platform)
 
 | Ruby runtime (`tamatebako/tebako-runtime-ruby`)
-| runtime 0.16.9 / ruby 3.3.12 (resolved at first run)
+| runtime 0.16.31 / ruby 4.0.7 (resolved at first run)
 
 | metanorma payload (`tebako-packages/metanorma`)
-| 1.16.9 (release tag `1.16.9-3`)
+| 1.17.0 (release tag `1.17.0-3`)
 
-| OpenJDK slice (`tebako-packages/openjdk`)
-| 21.0.12
+| OpenJDK slice (`tamatebako/tebako-runtime-openjdk`)
+| 21.0.12 (release tag `v2.8.21`)
 
 | Inkscape slice (`tebako-packages/inkscape`)
-| 1.4.3
+| 1.4.3 (release tag `1.4.3-4`)
 |===
 
 Bumping any input is a one-line edit of `versions.yaml`; the workflow,

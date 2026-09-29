@@ -31,67 +31,67 @@
 schema_version: 1
 
 tebako:
-  version: 2.8.4
-  release: v2.8.4
+  version: 2.8.22
+  release: v2.8.22
   sha256:
     tebako-pkg:
-      macos-arm64: 0cdc60495a240b05a4e8a309af256ba4994985ea708096e0a1b170d7ae7eaefb
-      macos-x86_64: a603d1c6f5276240093a268c73ad09a4b3135f1095fc09aa68d04c78cf5c0954
-      linux-gnu-x86_64: ced719fc6292863f388f220deaf58f4f986071346cc6636f041279e697471023
-      windows-ucrt64: fc6dffd43f71a401c9c83cfa8e1021fc96a29910901506a4fb9c4693234016cf
+      macos-arm64: e7041a2b850539e32aa133790da25dc743e39644a7212d771ff483b58c8d8445
+      macos-x86_64: 401613866aee59c18a8fb61b4204e6cf2003a48bdf4fca89a78eedbd58d03ff7
+      linux-gnu-x86_64: ce4b41ebe778d34688fb555c234d17c299c4f5ce74e83ccc6cffc0db760bec2c
+      windows-ucrt64: 087517b2f4253dc6280a9cc598523d16f8cd86470d589e166bc23763558fe688
     tebako-bootstrap:
-      macos-arm64: 6dd9a235d6a06f3024f36d4f10ceb44a83c4c7fc3a26801d4fe334e9d50c3545
-      linux-gnu-x86_64: 122db9faf4aabad2b4502495afab5485bad7d42e6f270e3550a1f951439721b7
-      windows-ucrt64: 18c04a68ce5ce14564fe42b3f0722126fcb14cc4c4adb289f8758a05a756bbd1
+      macos-arm64: 26a4fa660e2144b10bac9d541a34cbdc0deefab03b378f1ae61b6fdc6633a71a
+      linux-gnu-x86_64: e9477b0ae840ec7f68af0a86c0db6771decf7f4b1782b343d8204ff5a513bf6c
+      windows-ucrt64: b77d8a5647fcd06f8491eddbadac939bbc1bad9f7eb810ebfaef286ca316149a
     tfs:
-      macos-arm64: 7c5387d7796afac2c774a32e50da3f3b2a1ca49152d2766c38d64a80161e3820
-      macos-x86_64: 20e57e637502ebeea4f02ebc55de8f1c5633611be22105e54f4429d1426d4902
-      linux-gnu-x86_64: 775ad6d513a335a52925dfce492e87940ac4a281cca0e40148c405140fb430cd
-      windows-ucrt64: a18fb19f0a95aa62427536bd6f4f461856cfc17517dafbd361b7bb65721b663d
+      macos-arm64: 08f201f20e808dc0d4253e1617a3dc549a1a316132fdce9d81457645049d2eda
+      macos-x86_64: 78ada85085d54eb9094d58e2ca468a768433bd7a45dddebfe60345ccf859b9a4
+      linux-gnu-x86_64: 69c1db503c17a5a6f8dfba907e2dc0d4dc214e2d9761d865c4151d38e0a91527
+      windows-ucrt64: 6207b465156bc25c090320e0f8761d47dbafc4fe2b61e8141aaae826f311a816
     # The installer legs (spec 16 §7) stage the FOUR PATH tools — tebako,
     # tebako-shim, tfs, tebako-pkg — so the CLI + dispatcher pins join the
     # press set here. macOS only: the live installer legs are the two pkg
     # arch legs; the windows-ucrt64 pins land with the parked MSI leg's
     # unpark (pins.rb fails CLOSED on a missing pin, named).
     tebako:
-      macos-arm64: f471e21ef81c139f313345aa08725237d68dcf6715d6f6c18d46e4a890e04955
-      macos-x86_64: 3b43f0d57df9a597a368ae0dca7aa4bd448dab339f4c7de95ca74556f8a21dff
+      macos-arm64: 8891a20fe12f3758a897b8aac2f90da80a3a35fb8626bf46b3ca9b98bd767942
+      macos-x86_64: 438da189f026c9194dff607fe5006b3e9ba94b36a2c1a0d8a9651c6e4bb2ab85
     tebako-shim:
-      macos-arm64: 906254b3a74452e1e2d92951d97fbdc4a8e996e39b0db20e94e4a5fe12daa4fb
-      macos-x86_64: 27ae761da830c5b5529ef55346979bf095f648f606883b78a56dffa48e7b1ebd
+      macos-arm64: c2b95280ec32a427fe93eb6d90d644771f4f45ef1500c978084e94f7115385d4
+      macos-x86_64: 2de51c76075a3a85e37208455a604b35af2696325023fd3246357cf633f4dee1
 
 runtime:
   # The runtime reference every package entry carries:
-  #   ruby@3.3.12;tebako=0.16.22;image
-  # ruby stays on the 3.3 line ON PURPOSE: the benchmark comparison vs the
-  # old (v1-tebako) packed-metanorma executables holds the interpreter line fixed
-  # (owner decision 2026-08-26 — do NOT bump to 4.0.6 here).
-  # 0.16.22 is REQUIRED by the spec-32 edge, not a preference: it is the
-  # factory re-cut on the tebako v2.2.0 link unit (the schema_minor-5
-  # driver parse) — on 0.16.21 the runtime exe's embedded driver refuses
-  # the edge-carrying metanorma manifest at boot by name ("unknown
-  # variant `executable`").
-  release: v0.16.22 # tamatebako/tebako-runtime-ruby tag
-  tebako: 0.16.22 # the runtime line (tebako=<abi> in the ref)
-  ruby: 3.3.12 # the interpreter version
+  #   ruby@4.0.7;tebako=0.16.31;image
+  # ruby moves to the 4.0 line ON PURPOSE: metanorma 1.17.0's DEFAULT flavor
+  # declares runtime_requirement ruby "~> 4.0.0" — the 3.3 line now serves
+  # only the explicit 1.17.0-ruby3.3 fallback flavor (owner decision — the
+  # 2026-08-26 "hold 3.3 for the v1 benchmark comparison" note is
+  # superseded; 1.17 runs ruby 4.0 as default).
+  # 0.16.31 is the current factory line carrying the spec-32 edge parse
+  # (the schema_minor-5 driver): the edge-carrying metanorma manifest boots
+  # by contract, never by fallback.
+  release: v0.16.31 # tamatebako/tebako-runtime-ruby tag
+  tebako: 0.16.31 # the runtime line (tebako=<abi> in the ref)
+  ruby: 4.0.7 # the interpreter version
   sha256:
     exe:
-      macos-arm64: 2a4bc5a9ad8860fa884586e9bcac87b14d7f5f41451a0e035ab8f0f77800f954
-      linux-gnu-x86_64: 5a2b6c8303999af0b5c73d6125074de192af82cf86b58ca22567da7bcb010a72
-      windows-ucrt64: ac6b9d8c8e56c61ebb00925c76f0f5b4a7fa910f3dbce258cc9971a0e8446ed4
+      macos-arm64: 45bc0b1c32297d0972eb32b733510eba1c7613cfc6182cc97bff5c25b0c6cc27
+      linux-gnu-x86_64: fd378e5907ba9fe5a86a5ee9eeb6dc842d442e717462a523334fb57fabc2c256
+      windows-ucrt64: 5e57e181d360e775aecc049e2240955594a8ecf6677f5d89f4efc1186ef624e8
     image:
-      macos-arm64: 1519215e7d998ef02300580d56f06fd72a9ee6fb61da3a1a1ff8d98f3c1272d4
-      linux-gnu-x86_64: dae5c5d66887b26281ca6f86f33d3f94fef4c0eadcac0625442723cbcfd6565e
-      windows-ucrt64: c739320ce6383c94aa7ebd8a9cac910a94d02aa8765c8a2a0f20d73af295ebde
-    dll: # windows-only facet (install_as: x64-ucrt-ruby330.dll)
-      windows-ucrt64: 685f1b86cf264c17a29b98b16dbfc214a38edb277cfe606452d89f8b8b203ba2
+      macos-arm64: 49c0d979988dcccfd59d437ebd3b1a7775d841358e2773f19ffbf84ac4c8dc72
+      linux-gnu-x86_64: e2f1a18f7cd6022f01ac26da4a4f87ec7666080dbb98867531fc981be7302eb2
+      windows-ucrt64: 614ca9b5666f74c69e2f9454e304cacfe2ec03c8438249a025f47e3e9bc908e8
+    dll: # windows-only facet (install_as: x64-ucrt-ruby400.dll)
+      windows-ucrt64: acc35a952351253ea2dd9a4a33374a1b5543892134db612223ddc8c58f38cdc2
 
 package:
   name: metanorma
   # The user-facing version = the metanorma payload version (the release
   # tag is v<this>). The composition's truth lives in the L2 package
   # manifest + the release's SHA256SUMS, not in an invented composite.
-  version: 1.16.9
+  version: 1.17.0
 
 # The installer containers (spec 16 §7): the product also ships as a
 # system pkg (macOS; the MSI parks with the windows press leg — see
@@ -114,12 +114,16 @@ installers:
   # (payloads flow from tebako-packages/metanorma's published releases —
   # never from this repo's).
   registry: tfs:github:tebako-packages/metanorma
-  # The installer machinery pin: a tamatebako/tebako main sha (the
-  # spec 16 §7 web-bootstrapper hook). 212b2cb carries the client-product
-  # rehearsal fix (#606 — the rehearsal asserts the toolset binary + the
-  # warmed shims, not bin/<product>); earlier shas fail every client
-  # product's rehearsal.
-  installer_ref: 212b2cb778debcb42da88f3ca6a74273c6656ca2
+  # The installer machinery pin: a tamatebako/tebako sha (the
+  # spec 16 §7 web-bootstrapper hook). 69f5fb4 is the
+  # installer-seed-poll branch head (tebako#688): aed83f2 (main HEAD,
+  # v2.8.22 + #684/#685/#670 — the spec-27 doc closure and the
+  # payload-level version pins) plus the rehearsal-poll race fix the
+  # 1.17.0 leg exposed (the detached seed's effects poll raced the warm —
+  # the closure's spawned runtimes land during install, so the rehearsal
+  # dispatch hit the root-held ruby install lock, EACCES). RE-PIN to the
+  # main HEAD sha once tebako#688 merges, before tagging.
+  installer_ref: 69f5fb4b9e456bd0856bbf88fa57f3ecbfd497cd
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the (parked) MSI leg consumes it.
@@ -127,61 +131,60 @@ installers:
 
 payloads:
   - name: metanorma
-    version: 1.16.9 # the slice version (lock.slices[].version)
-    release: 1.16.9-9 # tebako-packages/metanorma tag (see Deviations: not "1.16.9")
+    version: 1.17.0 # the slice version (lock.slices[].version)
+    release: 1.17.0-3 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
     assets:
       aarch64-macos:
-        file: metanorma-1.16.9-macos-arm64.tfs
-        sha256: a36e9733944fe5d82d1542c30d587ccaeb2129b927c9bdeee6d6549068701787
+        file: metanorma-1.17.0-macos-arm64.tfs
+        sha256: 018012581363d4e31cf4dc057df77c659399410cc07ca52c1e024706acd7e627
       x86_64-linux-gnu:
-        file: metanorma-1.16.9-linux-gnu-x86_64.tfs
-        sha256: a091af9e4e4b21537f25dff9c3dc4210f06733b568b7f917f741734f3abc9622
+        file: metanorma-1.17.0-linux-gnu-x86_64.tfs
+        sha256: a8fa4de02c907388cc962529f722cd1eb9010b37e31646e2e08c6890fe5b2902
       x86_64-windows-ucrt:
-        file: metanorma-1.16.9-windows-ucrt64.tfs
-        sha256: '23abaf44a071251579e4b0488636397e77366425e805220393775639723bf7eb'
+        file: metanorma-1.17.0-windows-ucrt64.tfs
+        sha256: 'ca82fa714f0b057b647018733f1359878b5f7f40485d13192446752acd5ac589'
   - name: openjdk
-    # openjdk is now a RUNTIME-kind payload: the v2.1.5 feedstock release
-    # renamed the assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
+    # openjdk is a RUNTIME-kind payload: the feedstock release names the
+    # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
     # spec 30: it is NEVER co-mounted — the package carries the exe+image
     # pair as lock.spawned[]-claimed slots; the bootstrap stages them into
     # the machine runtime cache at dispatch and exports TEBAKO_SPAWN_LOCK.
-    # v2.4.0 (REQUIRED 2026-09-06): the pair's launcher must read spec 32's
-    # kind: executable requires edge — 1.16.9-9 declares it (xml2rfc spawn)
-    # and the 2.1.5/2.3.0 launchers refuse it by the evolution law ("Jing
-    # failed … unknown variant `executable`"). Without this bump the carried
-    # java runtime breaks every jing/mn2pdf-spawning compile.
-    release: v2.4.0 # tebako-packages/openjdk tag
+    # v2.8.21 (2026-09-29): the pair rebuilt on the tebako 2.8.21 launcher
+    # line; the spec-32 kind: executable requires edge the 1.17.0 payload
+    # declares (xml2rfc spawn) parses on this launcher, and the asset
+    # digests mirror the feedstock's registry + release sidecars.
+    release: v2.8.21 # tebako-packages/openjdk tag
     lang_version: 21.0.12 # the engine version (lock.spawned[].version)
-    tebako_version: 2.4.0 # the runtime's own tebako line (lock.spawned[].tebako)
+    tebako_version: 2.8.21 # the runtime's own tebako line (lock.spawned[].tebako)
     assets:
       aarch64-macos:
-        file: tebako-runtime-2.4.0-21.0.12-macos-arm64.tfs
-        sha256: af3a0cadbb7d260ec4b369dc866f4e40923fd9e8266040b89d72ca2c0d78e9d7
-        exe_file: tebako-runtime-2.4.0-21.0.12-macos-arm64
-        exe_sha256: b27b44f560af3935458066e6d8815a8c985025ddf9657483303b45ad98e1db4c
+        file: tebako-runtime-2.8.21-21.0.12-macos-arm64.tfs
+        sha256: 3cee1e52a0ff8c75d2cd2137d0f8e651167ffa64bda97172b876daf6e7ffd7a8
+        exe_file: tebako-runtime-2.8.21-21.0.12-macos-arm64
+        exe_sha256: 2754c8985420a208f32ef277ca78c8c5f7e4a5aeac9a3e97c1420ece9b56edd8
       x86_64-linux-gnu:
-        file: tebako-runtime-2.4.0-21.0.12-linux-gnu-x86_64.tfs
-        sha256: 66259d5dcf50fda827664ef798d7ffa20376f4414ab4af75c2de6bf82b5b1af3
-        exe_file: tebako-runtime-2.4.0-21.0.12-linux-gnu-x86_64
-        exe_sha256: 910fc6d538e624150c9967564c67aefa277686ec00a77d898de8d78753ff12a7
+        file: tebako-runtime-2.8.21-21.0.12-linux-gnu-x86_64.tfs
+        sha256: 0a42c191b7d5f364d31bad3a7b2f1c7b49cadc883491a5b2c0cf1475854a41e6
+        exe_file: tebako-runtime-2.8.21-21.0.12-linux-gnu-x86_64
+        exe_sha256: 2f2cf0ea2626179d3bad89198ffaae7e2f233d98f52227938f7935cbb660200f
       x86_64-windows-ucrt:
-        file: tebako-runtime-2.4.0-21.0.12-windows-ucrt64.tfs
-        sha256: f756e81838eb45e369e2185d13ba31dbc5f8448aec027cdc8f3b4d7a6757b6d9
-        exe_file: tebako-runtime-2.4.0-21.0.12-windows-ucrt64.exe
-        exe_sha256: a97fc14d15f354e561c8c8c2bcfd007469fff343a58d0883de8181b85eee66f9
+        file: tebako-runtime-2.8.21-21.0.12-windows-ucrt64.tfs
+        sha256: 50a5c272df5b42e96c4e8d2f3bd7dadbb0d6d5c83da2c80d26820fde1995bc57
+        exe_file: tebako-runtime-2.8.21-21.0.12-windows-ucrt64.exe
+        exe_sha256: b6dc65f4aac1a40bb8be60a125ab98a18e9e1f0397fe7c394dddca551c4051ca
   - name: inkscape
     version: 1.4.3 # the slice version (lock.slices[].version)
-    release: 1.4.3-2 # tebako-packages/inkscape tag
+    release: 1.4.3-4 # tebako-packages/inkscape tag
     assets:
       aarch64-macos:
-        file: inkscape-1.4.3-aarch64-macos.tfs
-        sha256: 68a6b3717c1a01249e0d2ff2e9f9c41f8c4441faaeeb65657e18b7c2e7ea2a7a
+        file: inkscape-1.4.3-macos-arm64.tfs
+        sha256: 5211a801149afe317e45fd3ddaf95bf177dabeb67c972e05326ae4a9b6e1805d
       x86_64-linux-gnu:
-        file: inkscape-1.4.3-x86_64-linux-gnu.tfs
-        sha256: 56aa809b13c0b5875e98fcfea0facbb172d8aa51a5860e1ccdafeebd3183ce45
+        file: inkscape-1.4.3-linux-gnu-x86_64.tfs
+        sha256: e59caced0ff3de4d788a023999062bbb11fb3c13d04afcfbbd5d51f1cd86f329
       x86_64-windows-ucrt:
-        file: inkscape-1.4.3-x86_64-windows-ucrt.tfs
-        sha256: 1df2edb60ecaaef46c0f077b9421b597ef975ba31b076ef8a2ae3d0a971f4292
+        file: inkscape-1.4.3-windows-ucrt64.tfs
+        sha256: 1c654f366121eb09c1029e5fa887e75e4348ca5db6723b69de0ab5252a051494
   - name: xml2rfc
     # spec 32's first spawned-PAYLOAD edge: the ietf chain's xml2rfc console
     # script, dispatched as a child process through its own spec-17
@@ -189,35 +192,35 @@ payloads:
     # image + the nested python pair ride lock.spawned[]-claimed slots,
     # exactly like openjdk above).
     #
-    # RELEASE CHANNELS (re-flowed 2026-09-06 at the publish go-ahead): the
+    # RELEASE CHANNELS (re-flowed 2026-09-29 for the 1.17.0 refresh): the
     # payload digests mirror tebako-packages/xml2rfc's published registry
-    # (tag 3.34.0 — the first payload release; the POSIX six, windows
-    # pending the feedstock's windows leg); the python pair mirrors
-    # tamatebako/tebako-runtime-python's PUBLISHED v0.1.0 SHA256SUMS (the
-    # factory's first line, python 3.13.15).
-    version: 3.34.0 # the slice version (lock.spawned[] payload row's version)
-    release: 3.34.0 # tebako-packages/xml2rfc tag
-    lang_version: 3.13.15 # the nested runtime row's language version
-    tebako_version: 0.1.0 # the python runtime's own tebako line
-    python_release: v0.1.0 # tamatebako/tebako-runtime-python tag
+    # (3.34.1, tag 3.34.2 — the current row; its runtime_requirement is
+    # python "~> 3.14.0"); the python pair mirrors
+    # tamatebako/tebako-runtime-python's PUBLISHED v0.2.7 assets (python
+    # 3.14.7 — satisfies the edge's constraint).
+    version: 3.34.1 # the slice version (lock.spawned[] payload row's version)
+    release: 3.34.2 # tebako-packages/xml2rfc tag
+    lang_version: 3.14.7 # the nested runtime row's language version
+    tebako_version: 0.2.7 # the python runtime's own tebako line
+    python_release: v0.2.7 # tamatebako/tebako-runtime-python tag
     assets:
       aarch64-macos:
-        file: xml2rfc-3.34.0-macos-arm64.tfs
-        sha256: dd4e43954ed00af526ca52ba8e8470b7f83505817acad087b919d4a3de2fd0a7
-        py_exe_file: tebako-runtime-0.1.0-3.13.15-macos-arm64
-        py_exe_sha256: 4a45e648e3b0e5d038d220ad62e572fd9a952517dbd59970c76929c7435eb955
-        py_image_file: tebako-runtime-0.1.0-3.13.15-macos-arm64.tfs
-        py_image_sha256: c0fbd0bb7787d858003825b5d7bb33f3a88bd01ff1ab5798daaaa2b631b8df90
+        file: xml2rfc-3.34.1-macos-arm64.tfs
+        sha256: b1b3b2b52f7473b5b5984f6a04d6a2283a0921139fb53aaf5d18c02a733198de
+        py_exe_file: tebako-runtime-0.2.7-3.14.7-macos-arm64
+        py_exe_sha256: c44bbdcd01a5dcbba225e4017cb7e94fddcedd97da767b668b047f85564a57c9
+        py_image_file: tebako-runtime-0.2.7-3.14.7-macos-arm64.tfs
+        py_image_sha256: 9ac027e1af65726c885fe5eca5fc1bdc8916e1851a8d6841358c97f5703868a5
       x86_64-linux-gnu:
-        file: xml2rfc-3.34.0-linux-gnu-x86_64.tfs
-        sha256: 5f55766ad63f78edd67d771dc1530f40d702236b1894294e85217d3b25611579
-        py_exe_file: tebako-runtime-0.1.0-3.13.15-linux-gnu-x86_64
-        py_exe_sha256: 67c828a3b306125989ae777630e445bde5c775c4e0e4dd1394874cd0560b6b3e
-        py_image_file: tebako-runtime-0.1.0-3.13.15-linux-gnu-x86_64.tfs
-        py_image_sha256: 9eb034bd28d8ae97cb9d618d2a68c49c47c549172a72c0927905d85f8ba25351
-      # x86_64-windows-ucrt: deliberately ABSENT — no windows xml2rfc
-      # payload (the feedstock's CI is POSIX-only today) and no windows
-      # python runtime (the factory run built six POSIX legs) exist.
-      # pins.rb's missing-asset named error fails the windows press leg
-      # CLOSED; the leg is gated on the xml2rfc feedstock's windows build,
-      # a follow-up. Never invent a placeholder here.
+        file: xml2rfc-3.34.1-linux-gnu-x86_64.tfs
+        sha256: 3e9bf649231dc264b7f1b9ec3c5465a978d23c4663d860fb62b240997fac7f48
+        py_exe_file: tebako-runtime-0.2.7-3.14.7-linux-gnu-x86_64
+        py_exe_sha256: 7c2e9a9301c13e5f8df8b5646b1883b52de87f74ae83a6d50948fad31791d7ee
+        py_image_file: tebako-runtime-0.2.7-3.14.7-linux-gnu-x86_64.tfs
+        py_image_sha256: 9b71e0f28dbd40d43289a094d10ce6daa51fc93655183987417b21f66946c70b
+      # x86_64-windows-ucrt: deliberately ABSENT — the feedstock's 3.34.1
+      # registry row now HAS a windows payload and tebako-runtime-python
+      # v0.2.7 ships a windows-ucrt64 pair, but the windows PRESS LEG stays
+      # parked (build.yml, #257): the block lands with the leg's unpark.
+      # pins.rb's missing-asset named error fails a windows leg CLOSED;
+      # never invent a placeholder here.
