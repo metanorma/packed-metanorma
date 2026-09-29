@@ -163,6 +163,7 @@ lock:
     - {name: inkscape, version: "@@INK_VERSION@@", carry: true, slot: 3, mount: /opt/inkscape, sha256: "@@INK_SHA256@@"}
   spawned:
     - engine: java
+      implementation: temurin
       constraint: ">= 21, < 26"
       expose: [java]
       version: "@@JDK_LANG@@"
@@ -174,8 +175,8 @@ lock:
     # edge, mirrored from the payload's L1 requires[].kind: executable
     # (payload / constraint / expose verbatim — tebako-pkg validate's
     # TWO-LEVEL cross-check asserts this mirror AND the nested runtime
-    # row's constraint against the PROVIDER's L1 kind: language edge,
-    # "~> 3.13.0"). Slots 4–6: the provider image + the nested python
+    # row's constraint against the PROVIDER's L1 kind: language edge —
+    # xml2rfc 3.34.1 declares "~> 3.14.0"). Slots 4–6: the provider image + the nested python
     # pair, claimed with EMPTY mount points, staged into the machine
     # payloads/ + runtimes/ caches at dispatch; the nested row's expose
     # stays empty (the spawn surface rides THIS row's expose).
@@ -187,7 +188,7 @@ lock:
       image: {slot: 4, sha256: "@@X2RFC_IMAGE_SHA256@@"}
       runtime:
         engine: python
-        constraint: "~> 3.13.0"
+        constraint: "~> 3.14.0"
         version: "@@PY_LANG@@"
         tebako: "@@PY_TEBAKO@@"
         carry: true

@@ -45,17 +45,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      # WINDOWS LEG PARKED (spec 32): versions.yaml's xml2rfc entry has no
-      # x86_64-windows-ucrt asset — no windows xml2rfc payload (the
-      # feedstock is POSIX-only today) and no windows python runtime (the
-      # factory's first published line built six POSIX legs) exist.
-      # tools/pins.rb would fail a windows "Read pins" step CLOSED (a
-      # missing asset is a named error, never a silent skip of the spawn
-      # edge), and a permanently-red leg blocks the release job
-      # (needs: [press]) — so the leg is out of the matrix until the
-      # xml2rfc feedstock ships its windows build. The release layout,
-      # notes, asset list, and the chocolatey/winget downstream dispatches
-      # park with it (see the release job).
+      # WINDOWS LEG PARKED (spec 32, #257): versions.yaml's xml2rfc entry
+      # has no x86_64-windows-ucrt asset BY DECISION — the upstream inputs
+      # now exist (xml2rfc 3.34.1 ships a windows-ucrt64 payload and
+      # tebako-runtime-python v0.2.7 a windows pair), but the leg stays
+      # parked until its explicit unpark. tools/pins.rb would fail a
+      # windows "Read pins" step CLOSED (a missing asset is a named error,
+      # never a silent skip of the spawn edge), and a permanently-red leg
+      # blocks the release job (needs: [press]) — so the leg is out of
+      # the matrix. The release layout, notes, asset list, and the
+      # chocolatey/winget downstream dispatches park with it (see the
+      # release job).
       matrix:
         include:
           - triplet: aarch64-macos
@@ -191,7 +191,7 @@ jobs:
           # its feedstock, plus the nested python runtime pair from the
           # runtime factory (the same releases-consumed-downward rule as
           # every input — versions.yaml's xml2rfc entry carries the tags;
-          # both ride PUBLISHED releases: xml2rfc 3.34.0, python v0.1.0).
+          # both ride PUBLISHED releases: xml2rfc 3.34.2, python v0.2.7).
           x2b="https://github.com/tebako-packages/xml2rfc/releases/download/$X2RFC_RELEASE"
           pyb="https://github.com/tamatebako/tebako-runtime-python/releases/download/$PY_RELEASE"
           curl -fSL "$mnb/$MN_FILE"  -o "$PAYLOADS/$MN_FILE"
@@ -327,14 +327,14 @@ jobs:
             # 3=inkscape, 4=xml2rfc provider image (claimed, never
             # mounted), 5=python exe (claimed, never mounted), 6=python
             # env image (claimed, never mounted).
-            # Slots 4/6 are limnifs, not dwarfs: the xml2rfc feedstock and
-            # the python runtime factory build on the tebako 2.2.0
-            # toolchain, whose mkimage default is limnifs (spec 20 §6).
-            # Verified against the published bytes (xml2rfc 3.34.0,
-            # tebako-runtime-python v0.1.0); the v2.2.0 runtime mounts
-            # both backends.
+            # Every image slot is limnifs: since spec 20 limnifs is the
+            # default writer (§6) and every current feedstock/factory
+            # builds on a tebako ≥ 2.2.0 toolchain — verified against the
+            # published bytes (metanorma 1.17.0-3, openjdk v2.8.21,
+            # inkscape 1.4.3-4, xml2rfc 3.34.2, tebako-runtime-python
+            # v0.2.7 — all LMFS magic); the runtime mounts both backends.
             want = ["/__tfs__", "", "", "/opt/inkscape", "", "", ""]
-            fmts = ["dwarfs", "auto", "dwarfs", "dwarfs", "limnifs", "auto", "limnifs"]
+            fmts = ["limnifs", "auto", "limnifs", "limnifs", "limnifs", "auto", "limnifs"]
             slots.each_with_index do |s, i|
               die.call("slot#{i} mount #{s["mount"].inspect} != #{want[i].inspect}") unless s["mount"] == want[i]
               die.call("slot#{i} format #{s["format"].inspect} != #{fmts[i].inspect}") unless s["format"] == fmts[i]
@@ -390,7 +390,7 @@ jobs:
             # spec 30 layout: 0=app, 1=java exe (claimed, never mounted),
             # 2=java env image (claimed, never mounted), 3=inkscape.
             want = ["/__tfs__", "", "", "/opt/inkscape"]
-            fmts = ["dwarfs", "auto", "dwarfs", "dwarfs"]
+            fmts = ["limnifs", "auto", "limnifs", "limnifs"]
             die.call("expected 4 slots") unless j["slots"].length == 4
             j["slots"].each_with_index do |s, i|
               die.call("slot#{i} mount/format wrong") unless s["mount"] == want[i] && s["format"] == fmts[i]
@@ -742,11 +742,12 @@ jobs:
           ## Known limitations
 
           - NO WINDOWS PACKAGE in this release: the spec-32 xml2rfc spawn
-            edge has no windows payload yet (the xml2rfc feedstock is
-            POSIX-only and no windows python runtime exists), so the windows
-            press leg is parked rather than silently dropping the edge.
-            Windows re-arms with the feedstock's windows build; until then
-            v1.16.9-3 remains the latest windows package.
+            edge's windows inputs now exist upstream (xml2rfc 3.34.1 ships
+            a windows-ucrt64 payload and tebako-runtime-python v0.2.7 a
+            windows pair), but the windows press leg stays parked (#257)
+            rather than shipping a half-validated composition. Windows
+            re-arms with the leg's unpark; until then v1.16.9-3 remains
+            the latest windows package.
 
           | Platform | Asset |
           |---|---|
@@ -917,12 +918,12 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # installer-msi PARKED (spec 32): the MSI leg unparks with the windows
-  # press leg — versions.yaml's xml2rfc entry has no x86_64-windows-ucrt
-  # asset (no windows xml2rfc payload from the POSIX-only feedstock, no
-  # windows python runtime from the factory), so the windows product story
-  # is incomplete and a windows installer container waits with it (see the
-  # press matrix comment). The windows-signing environment on this repo is
+  # installer-msi PARKED (spec 32, #257): the MSI leg unparks with the
+  # windows press leg — versions.yaml's xml2rfc entry has no
+  # x86_64-windows-ucrt asset by decision (the upstream windows payload
+  # and python pair exist; the park continues until the leg's explicit
+  # unpark), so the windows product story is incomplete and a windows
+  # installer container waits with it (see the press matrix comment). The windows-signing environment on this repo is
   # ALREADY armed (Azure Trusted Signing: account metanorma-ci-signing,
   # profile metanorma-public-trust — owner-provisioned, do not recreate;
   # the Entra OIDC subject is the immutable repo-ID form, so the repo
