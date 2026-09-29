@@ -117,15 +117,11 @@ installers:
   # never from this repo's).
   registry: tfs:github:tebako-packages/metanorma
   # The installer machinery pin: a tamatebako/tebako sha (the
-  # spec 16 §7 web-bootstrapper hook). 69f5fb4 is the
-  # installer-seed-poll branch head (tebako#688): aed83f2 (main HEAD,
-  # v2.8.22 + #684/#685/#670 — the spec-27 doc closure and the
-  # payload-level version pins) plus the rehearsal-poll race fix the
-  # 1.17.0 leg exposed (the detached seed's effects poll raced the warm —
-  # the closure's spawned runtimes land during install, so the rehearsal
-  # dispatch hit the root-held ruby install lock, EACCES). RE-PIN to the
-  # main HEAD sha once tebako#688 merges, before tagging.
-  installer_ref: 69f5fb4b9e456bd0856bbf88fa57f3ecbfd497cd
+  # spec 16 §7 web-bootstrapper hook). fe67287 is main HEAD with
+  # tebako#688 merged — the pkg rehearsal poll waits for the detached
+  # seed's completion effects (the 1.17.0 leg exposed the race: the
+  # rehearsal dispatch hit the root-held ruby install lock, EACCES).
+  installer_ref: fe672875d41fe2972b89b84b5dd79b6933ad2bcc
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the MSI leg consumes it.
