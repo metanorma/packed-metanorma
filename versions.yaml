@@ -50,15 +50,17 @@ tebako:
       windows-ucrt64: 6207b465156bc25c090320e0f8761d47dbafc4fe2b61e8141aaae826f311a816
     # The installer legs (spec 16 §7) stage the FOUR PATH tools — tebako,
     # tebako-shim, tfs, tebako-pkg — so the CLI + dispatcher pins join the
-    # press set here. macOS only: the live installer legs are the two pkg
-    # arch legs; the windows-ucrt64 pins land with the parked MSI leg's
-    # unpark (pins.rb fails CLOSED on a missing pin, named).
+    # press set here, per installer-leg platform (the pkg legs' macos-*,
+    # the MSI leg's windows-ucrt64). pins.rb fails CLOSED on a missing
+    # pin, named.
     tebako:
       macos-arm64: 8891a20fe12f3758a897b8aac2f90da80a3a35fb8626bf46b3ca9b98bd767942
       macos-x86_64: 438da189f026c9194dff607fe5006b3e9ba94b36a2c1a0d8a9651c6e4bb2ab85
+      windows-ucrt64: be560770adcfe54464cda9190b597c67aef532dbd6ddb43eb72847900b178c2f
     tebako-shim:
       macos-arm64: c2b95280ec32a427fe93eb6d90d644771f4f45ef1500c978084e94f7115385d4
       macos-x86_64: 2de51c76075a3a85e37208455a604b35af2696325023fd3246357cf633f4dee1
+      windows-ucrt64: 748ce58860d808dc1176137273e1f0abc7935cd1709fc32713241fe57c30773b
 
 runtime:
   # The runtime reference every package entry carries:
@@ -94,9 +96,9 @@ package:
   version: 1.17.0
 
 # The installer containers (spec 16 §7): the product also ships as a
-# system pkg (macOS; the MSI parks with the windows press leg — see
-# build.yml), built by tamatebako/tebako's ci scripts + templates, fetched
-# at installer_ref (the SSOT — never forked). Bound as a WEB BOOTSTRAPPER:
+# system pkg (macOS) and MSI (windows), built by tamatebako/tebako's ci
+# scripts + templates, fetched at installer_ref (the SSOT — never
+# forked). Bound as a WEB BOOTSTRAPPER:
 # the installer stages the four PATH tools (the tebako/tebako-shim/tfs/
 # tebako-pkg pins above), runs <root>/bootstrap-seed.* at install time
 # (best-effort — an offline machine re-runs it later) to install the
@@ -126,7 +128,7 @@ installers:
   installer_ref: 69f5fb4b9e456bd0856bbf88fa57f3ecbfd497cd
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
-  # the (parked) MSI leg consumes it.
+  # the MSI leg consumes it.
   msi_upgrade_code: 57CE2E16-2EA0-4B1C-AD8F-7E66F82D0EAA
 
 payloads:
@@ -218,9 +220,14 @@ payloads:
         py_exe_sha256: 7c2e9a9301c13e5f8df8b5646b1883b52de87f74ae83a6d50948fad31791d7ee
         py_image_file: tebako-runtime-0.2.7-3.14.7-linux-gnu-x86_64.tfs
         py_image_sha256: 9b71e0f28dbd40d43289a094d10ce6daa51fc93655183987417b21f66946c70b
-      # x86_64-windows-ucrt: deliberately ABSENT — the feedstock's 3.34.1
-      # registry row now HAS a windows payload and tebako-runtime-python
-      # v0.2.7 ships a windows-ucrt64 pair, but the windows PRESS LEG stays
-      # parked (build.yml, #257): the block lands with the leg's unpark.
-      # pins.rb's missing-asset named error fails a windows leg CLOSED;
-      # never invent a placeholder here.
+      # The windows row (unparked with the windows press leg, #259): the
+      # payload digest mirrors the feedstock's 3.34.1 registry row (tag
+      # 3.34.2); the python pair mirrors tebako-runtime-python v0.2.7's
+      # published windows-ucrt64 .sha256 sidecars.
+      x86_64-windows-ucrt:
+        file: xml2rfc-3.34.1-windows-ucrt64.tfs
+        sha256: '8891add05c7611c5013be80fcc017470cf976e05141a8c263b8c40c618fe0ecb'
+        py_exe_file: tebako-runtime-0.2.7-3.14.7-windows-ucrt64.exe
+        py_exe_sha256: ffc2a8bbc2e1ab6711d11406a4d0e71379650a70aa79ffc78c022bbc07696588
+        py_image_file: tebako-runtime-0.2.7-3.14.7-windows-ucrt64.tfs
+        py_image_sha256: 9841f42bc3dd88886014c8b4d7c0ef2140ab615fa9df679a3250b76ef0cbb624

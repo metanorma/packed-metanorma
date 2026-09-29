@@ -21,8 +21,8 @@
 #
 # Installer mode (--installer-env): the installer legs' env (spec 16 §7) —
 # the product binds + the four PATH tools' asset names and sha256 pins for
-# the leg's triplet (aarch64-macos, x86_64-macos; x86_64-windows-ucrt maps
-# for the parked MSI leg). Never touches the payload slice pins: the seed
+# the leg's triplet (aarch64-macos, x86_64-macos, x86_64-windows-ucrt).
+# Never touches the payload slice pins: the seed
 # resolves the metanorma payload from the feedstock REGISTRY at install
 # time, and x86_64-macos has no slice pins in versions.yaml (the press
 # matrix never builds one) — resolving slices here would fail the leg on
@@ -73,9 +73,8 @@ end
 if ARGV[0] == "--installer-env"
   itriplet = ARGV[1] or die "usage: pins.rb --installer-env <triplet>"
   # Installer-leg triplet → tebako toolchain asset platform (the press
-  # matrix carries the two as separate columns; the installer matrix is
-  # the two macOS triplets, windows-ucrt64 mapping for the parked MSI
-  # leg — its tebako/tebako-shim pins land in versions.yaml at unpark).
+  # matrix carries the two as separate columns; the installer legs are the
+  # macOS triplets and the MSI leg's windows-ucrt64).
   itool = {
     "aarch64-macos" => "macos-arm64",
     "x86_64-macos" => "macos-x86_64",
@@ -148,9 +147,8 @@ mn_p, mn = slice.call("metanorma")
 jdk_p, jdk = slice.call("openjdk")
 ink_p, ink = slice.call("inkscape")
 # spec 32's spawned payload: the xml2rfc slice + its nested python runtime
-# pair. A triplet with no asset (windows today — no windows xml2rfc payload
-# or python runtime exists) dies here on slice.call's named error: the leg
-# fails CLOSED, never a silent skip of the spawn edge.
+# pair. A triplet with no asset dies here on slice.call's named error: the
+# leg fails CLOSED, never a silent skip of the spawn edge.
 x2_p, x2 = slice.call("xml2rfc")
 
 windows = tool.start_with?("windows")
