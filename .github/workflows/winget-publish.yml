@@ -1,0 +1,194 @@
+name: winget-publish
+
+# Publishes the Windows MSI installer of a packed-metanorma release to
+# the Windows Package Manager community repository (microsoft/winget-pkgs,
+# package Metanorma.Metanorma) as a pull request opened from the
+# metanorma-ci fork, using komac.
+#
+# Manual flow: Actions -> winget-publish -> Run workflow -> version
+# (e.g. 1.17.0). The `manifests` job resolves the release that carries
+# metanorma-setup-<version>-windows-ucrt64.msi (the tag is NOT assumed to
+# be v<version> — for 1.17.0 the MSI lives on v1.17.0-1), downloads the
+# MSI, generates the winget manifests with komac, validates them with
+# winget, and uploads them as an artifact. The `submit` job — guarded by
+# the `winget-publish` environment, the upstream-repository check, and
+# the `submit` input — opens the pull request. The submission token is
+# the org secret METANORMA_CI_PAT_TOKEN (a PAT of the metanorma-ci
+# account, which owns the winget-pkgs fork).
+#
+# Release wiring (enable once the manual flow is proven end to end):
+#   on:
+#     release:
+#       types: [published]
+# plus a step mapping the release onto the version input via
+# versions.yaml (the tag suffix after the version is a build number).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Product version to publish (e.g. 1.17.0)'
+        required: true
+        type: string
+      submit:
+        description: 'Open the winget-pkgs pull request (requires the winget-publish environment)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_ID: Metanorma.Metanorma
+  SOURCE_REPO: metanorma/packed-metanorma
+  KOMAC_VERSION: '2.16.0'
+
+jobs:
+  manifests:
+    name: Resolve release, generate and validate manifests
+    runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Resolve the release carrying the MSI
+        id: resolve
+        shell: pwsh
+        run: |
+          $Version = '${{ inputs.version }}'
+          if ($Version -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "version must be a bare semver like 1.17.0, got '$Version'"
+            exit 1
+          }
+          $AssetName = "metanorma-setup-$Version-windows-ucrt64.msi"
+          # The tag is not assumed to be v<version>: pick the newest
+          # non-draft release (the API returns newest first) that
+          # carries the MSI asset.
+          $Releases = gh api "repos/${{ env.SOURCE_REPO }}/releases?per_page=100" | ConvertFrom-Json
+          $Release = $Releases |
+            Where-Object { -not $_.draft -and ($_.assets | Where-Object { $_.name -eq $AssetName }) } |
+            Select-Object -First 1
+          if (-not $Release) {
+            Write-Error "no release of ${{ env.SOURCE_REPO }} carries $AssetName"
+            exit 1
+          }
+          $Asset = $Release.assets | Where-Object { $_.name -eq $AssetName } | Select-Object -First 1
+          Write-Host "version $Version -> tag $($Release.tag_name)"
+          "tag=$($Release.tag_name)" >> $env:GITHUB_OUTPUT
+          "url=$($Asset.browser_download_url)" >> $env:GITHUB_OUTPUT
+          "asset=$AssetName" >> $env:GITHUB_OUTPUT
+
+      - name: Download the MSI and compute its sha256
+        id: hash
+        shell: pwsh
+        run: |
+          gh release download '${{ steps.resolve.outputs.tag }}' `
+            --repo '${{ env.SOURCE_REPO }}' `
+            --pattern '${{ steps.resolve.outputs.asset }}' `
+            --dir msi --clobber
+          $Hash = (Get-FileHash "msi/${{ steps.resolve.outputs.asset }}" -Algorithm SHA256).Hash
+          Write-Host "sha256: $Hash"
+          "sha256=$Hash" >> $env:GITHUB_OUTPUT
+
+      - name: Install komac
+        shell: pwsh
+        run: |
+          winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
+            --accept-source-agreements --accept-package-agreements --disable-interactivity
+
+      - name: Generate the winget manifests (dry run)
+        shell: pwsh
+        env:
+          CI: 'true'
+          # komac queries the winget-pkgs repo even for a dry run (to
+          # carry forward the previous manifest and check for existing
+          # PRs); a read-capable token is enough here.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          komac update ${{ env.PACKAGE_ID }} `
+            --version '${{ inputs.version }}' `
+            --urls '${{ steps.resolve.outputs.url }}' `
+            --release-notes-url 'https://github.com/${{ env.SOURCE_REPO }}/releases/tag/${{ steps.resolve.outputs.tag }}' `
+            --dry-run --output out
+
+      - name: Fix up the installer manifest and cross-check the hash
+        shell: pwsh
+        run: |
+          $File = "out/manifests/m/Metanorma/Metanorma/${{ inputs.version }}/${{ env.PACKAGE_ID }}.installer.yaml"
+          $Lines = Get-Content $File
+          if (($Lines | Select-String '^InstallerType:').Line -notmatch 'wix') {
+            Write-Error "expected InstallerType wix in ${File}:"
+            Write-Error ($Lines -join "`n")
+            exit 1
+          }
+          # NestedInstallerType/NestedInstallerFiles are only valid for
+          # zip installers; komac carries them over from the previous
+          # (portable zip) manifest, which winget validation rejects for
+          # a wix installer.
+          $InNestedFiles = $false
+          $Filtered = foreach ($Line in $Lines) {
+            if ($Line -match '^NestedInstallerType:') { continue }
+            if ($Line -match '^NestedInstallerFiles:') { $InNestedFiles = $true; continue }
+            if ($InNestedFiles -and $Line -match '^- ') { continue }
+            $InNestedFiles = $false
+            $Line
+          }
+          Set-Content $File $Filtered
+          # komac downloads the MSI itself; assert the hash it recorded
+          # matches the hash of the MSI we downloaded from the release.
+          $ManifestHash = ($Filtered | Select-String '^  InstallerSha256: ([0-9A-F]{64})$').Matches.Groups[1].Value
+          if ($ManifestHash -ne '${{ steps.hash.outputs.sha256 }}') {
+            Write-Error "manifest sha256 $ManifestHash does not match downloaded MSI sha256 ${{ steps.hash.outputs.sha256 }}"
+            exit 1
+          }
+          Get-Content $File
+
+      - name: Validate the manifests with winget
+        shell: pwsh
+        run: |
+          winget validate --manifest "out/manifests/m/Metanorma/Metanorma/${{ inputs.version }}"
+
+      - name: Upload the manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests
+          path: out/manifests/
+          retention-days: 30
+
+  submit:
+    name: Open the winget-pkgs pull request
+    needs: manifests
+    # Belt and braces: only from the upstream repository, only when the
+    # submit input is set, and only inside the winget-publish environment
+    # (which additionally holds back forks, where neither the environment
+    # nor the org secret exists).
+    if: github.repository == 'metanorma/packed-metanorma' && inputs.submit
+    runs-on: windows-latest
+    environment: winget-publish
+    steps:
+      - name: Download the validated manifests
+        uses: actions/download-artifact@v4
+        with:
+          name: winget-manifests
+          path: out
+
+      - name: Install komac
+        shell: pwsh
+        run: |
+          winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
+            --accept-source-agreements --accept-package-agreements --disable-interactivity
+
+      - name: Submit the pull request from the metanorma-ci fork
+        shell: pwsh
+        env:
+          CI: 'true'
+          # komac reads its token from GITHUB_TOKEN; GH_TOKEN is set as
+          # well for any gh-cli fallback. This PAT belongs to the
+          # metanorma-ci account, under which komac forks
+          # microsoft/winget-pkgs and opens the PR.
+          GITHUB_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+          GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+        run: |
+          komac submit "out/manifests/m/Metanorma/Metanorma/${{ inputs.version }}" --yes

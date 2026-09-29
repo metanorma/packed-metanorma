@@ -77,7 +77,9 @@ Download the asset for your platform from the release page:
 
 * macOS (Apple Silicon): `metanorma-darwin-arm64.tgz`
 * Linux (x86_64): `metanorma-linux-x86_64.tgz`
-* Windows (x86_64): `metanorma-windows-x86_64.exe` (also as `.zip`)
+* Windows (x86_64): `metanorma-setup-<version>-windows-ucrt64.msi`
+  (signed installer; portable `metanorma-windows-x86_64.exe`, also as
+  `.zip`)
 
 Unpack (macOS/Linux) and run:
 
@@ -91,6 +93,19 @@ On first run the package downloads the Ruby runtime pair (interpreter +
 environment image, sha256-verified) into `~/.tebako` and caches it
 machine-wide; later runs start immediately. No compilation machinery, no
 system dependencies.
+
+== Downstream channels
+
+Besides the assets attached to each release, the signed Windows MSI
+installer is published to the
+https://learn.microsoft.com/windows/package-manager/[Windows Package
+Manager] community repository as `Metanorma.Metanorma`, so Windows users
+can install and keep Metanorma up to date with `winget install
+Metanorma.Metanorma`. The submission is automated by the
+`winget-publish` workflow, which builds the winget manifest from the MSI
+attached to a release and opens a pull request to
+`microsoft/winget-pkgs`; a new version appears on winget once that pull
+request is reviewed and merged there.
 
 == Development
 
