@@ -180,7 +180,25 @@ jobs:
     runs-on: windows-latest
     environment: winget-publish
     steps:
-      - name: Download the validated manifests
+      - name: Skip when winget-pkgs already has an open PR for this version
+        id: dupcheck
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+        run: |
+          # Release respins re-fire the fan-out; a second komac submit for
+          # the same version would open a duplicate winget-pkgs PR.
+          $prs = gh pr list --repo microsoft/winget-pkgs --search "Metanorma.Metanorma ${{ inputs.version }} in:title" --json number,state --limit 10 | ConvertFrom-Json
+          $open = @($prs | Where-Object { $_.state -eq 'OPEN' })
+          if ($open.Count -gt 0) {
+            Write-Host "winget-pkgs already has an open PR for ${{ inputs.version }}: #$($open[0].number) — skipping submit"
+            "skip=true" | Out-File $env:GITHUB_OUTPUT -Append
+          } else {
+            "skip=false" | Out-File $env:GITHUB_OUTPUT -Append
+          }
+
+      - if: steps.dupcheck.outputs.skip == 'false'
+        name: Download the validated manifests
         uses: actions/download-artifact@v4
         with:
           name: winget-manifests
@@ -202,6 +220,7 @@ jobs:
           echo "$dir" >> $env:GITHUB_PATH
           komac --version
 
+      - if: steps.dupcheck.outputs.skip == 'false'
       - name: Ensure the metanorma-ci winget-pkgs fork exists
         shell: pwsh
         env:
@@ -212,6 +231,7 @@ jobs:
           # fork is idempotent: an existing fork is a no-op success.
           gh repo fork microsoft/winget-pkgs --clone=false
 
+      - if: steps.dupcheck.outputs.skip == 'false'
       - name: Submit the pull request from the metanorma-ci fork
         shell: pwsh
         env:

@@ -1217,3 +1217,41 @@ jobs:
           path: tebako-ci/out/
           retention-days: 7
           if-no-files-found: ignore
+
+  fanout:
+    name: Fan out the release to the downstream channels
+    # Every tag pushes the fan-out; the channels themselves are idempotent
+    # (brew/snap skip an at-version bump, chocolatey/winget skip an
+    # already-submitted version), so respin tags are safe.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [release, installer-pkg, installer-msi]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read the product version (versions.yaml is the SSOT)
+        run: |
+          V=$(ruby -ryaml -e 'puts YAML.load_file("versions.yaml").fetch("package").fetch("version")')
+          echo "read product version $V from versions.yaml (tag ${{ github.ref_name }})"
+          echo "PRODUCT_VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: winget — validate the manifests and open the winget-pkgs PR
+        env:
+          GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+        run: gh workflow run winget-publish.yml -f version="$PRODUCT_VERSION" -f submit=true
+
+      - name: Dispatch the downstream channel bumps
+        env:
+          GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+        run: |
+          set -euo pipefail
+          for repo in \
+            metanorma/homebrew-metanorma \
+            metanorma/metanorma-snap \
+            metanorma/metanorma-docker \
+            metanorma/chocolatey-metanorma; do
+            gh api "repos/$repo/dispatches" \
+              -f event_type=metanorma/packed-metanorma \
+              -f "client_payload[version]=$PRODUCT_VERSION" \
+              -f "client_payload[ref]=$GITHUB_REF"
+            echo "dispatched: $repo"
+          done
