@@ -95,19 +95,13 @@ jobs:
       - name: Install komac
         shell: pwsh
         run: |
-          winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
-            --accept-source-agreements --accept-package-agreements --disable-interactivity
-          # winget's shim lands in the per-user Links dir, which is on
-          # PATH only for NEW processes — expose it here and to later
-          # steps (the first run died on 'komac is not recognized').
-          $links = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
-          if (Test-Path "$links\komac.exe") {
-            $dir = $links
-          } else {
-            $exe = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter komac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (-not $exe) { Write-Error "komac.exe not found under WinGet packages after install"; exit 1 }
-            $dir = $exe.DirectoryName
-          }
+          # Direct pinned download from komac's GitHub release: the winget
+          # package is MSIX — its app-execution alias lands in WindowsApps
+          # and never reaches this shell's PATH (two dispatches died on
+          # 'komac is not recognized').
+          $dir = "$env:RUNNER_TEMP\komac-bin"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/RussellBanks/komac/releases/download/v${env:KOMAC_VERSION}/komac-${env:KOMAC_VERSION}-x86_64-pc-windows-msvc.exe" -OutFile "$dir\komac.exe"
           $env:PATH = "$dir;$env:PATH"
           echo "$dir" >> $env:GITHUB_PATH
           komac --version
@@ -191,19 +185,13 @@ jobs:
       - name: Install komac
         shell: pwsh
         run: |
-          winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
-            --accept-source-agreements --accept-package-agreements --disable-interactivity
-          # winget's shim lands in the per-user Links dir, which is on
-          # PATH only for NEW processes — expose it here and to later
-          # steps (the first run died on 'komac is not recognized').
-          $links = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
-          if (Test-Path "$links\komac.exe") {
-            $dir = $links
-          } else {
-            $exe = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter komac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (-not $exe) { Write-Error "komac.exe not found under WinGet packages after install"; exit 1 }
-            $dir = $exe.DirectoryName
-          }
+          # Direct pinned download from komac's GitHub release: the winget
+          # package is MSIX — its app-execution alias lands in WindowsApps
+          # and never reaches this shell's PATH (two dispatches died on
+          # 'komac is not recognized').
+          $dir = "$env:RUNNER_TEMP\komac-bin"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/RussellBanks/komac/releases/download/v${env:KOMAC_VERSION}/komac-${env:KOMAC_VERSION}-x86_64-pc-windows-msvc.exe" -OutFile "$dir\komac.exe"
           $env:PATH = "$dir;$env:PATH"
           echo "$dir" >> $env:GITHUB_PATH
           komac --version
