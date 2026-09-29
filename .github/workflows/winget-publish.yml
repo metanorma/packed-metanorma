@@ -97,6 +97,20 @@ jobs:
         run: |
           winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
             --accept-source-agreements --accept-package-agreements --disable-interactivity
+          # winget's shim lands in the per-user Links dir, which is on
+          # PATH only for NEW processes — expose it here and to later
+          # steps (the first run died on 'komac is not recognized').
+          $links = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
+          if (Test-Path "$links\komac.exe") {
+            $dir = $links
+          } else {
+            $exe = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter komac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { Write-Error "komac.exe not found under WinGet packages after install"; exit 1 }
+            $dir = $exe.DirectoryName
+          }
+          $env:PATH = "$dir;$env:PATH"
+          echo "$dir" >> $env:GITHUB_PATH
+          komac --version
 
       - name: Generate the winget manifests (dry run)
         shell: pwsh
@@ -179,6 +193,20 @@ jobs:
         run: |
           winget install --id RussellBanks.Komac --version $env:KOMAC_VERSION --exact `
             --accept-source-agreements --accept-package-agreements --disable-interactivity
+          # winget's shim lands in the per-user Links dir, which is on
+          # PATH only for NEW processes — expose it here and to later
+          # steps (the first run died on 'komac is not recognized').
+          $links = "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
+          if (Test-Path "$links\komac.exe") {
+            $dir = $links
+          } else {
+            $exe = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter komac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { Write-Error "komac.exe not found under WinGet packages after install"; exit 1 }
+            $dir = $exe.DirectoryName
+          }
+          $env:PATH = "$dir;$env:PATH"
+          echo "$dir" >> $env:GITHUB_PATH
+          komac --version
 
       - name: Submit the pull request from the metanorma-ci fork
         shell: pwsh
