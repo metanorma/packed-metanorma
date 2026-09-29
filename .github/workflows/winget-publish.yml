@@ -156,7 +156,11 @@ jobs:
       - name: Validate the manifests with winget
         shell: pwsh
         run: |
-          winget validate --manifest "out/manifests/m/Metanorma/Metanorma/${{ inputs.version }}"
+          # --ignore-warnings: komac's schema-header comment version can
+          # drift behind the winget client's, which is reported as a
+          # warning (and otherwise fails the step despite zero errors).
+          # Real validation errors still exit non-zero.
+          winget validate --ignore-warnings --manifest "out/manifests/m/Metanorma/Metanorma/${{ inputs.version }}"
 
       - name: Upload the manifests
         uses: actions/upload-artifact@v4
