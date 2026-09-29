@@ -184,7 +184,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: winget-manifests
-          path: out
+          # The upload's path is out/manifests/, so the artifact root holds
+          # m/…; restore the manifests level for the komac submit argument.
+          path: out/manifests
 
       - name: Install komac
         shell: pwsh
