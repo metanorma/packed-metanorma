@@ -202,14 +202,24 @@ jobs:
           echo "$dir" >> $env:GITHUB_PATH
           komac --version
 
+      - name: Ensure the metanorma-ci winget-pkgs fork exists
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+        run: |
+          # komac submits from a fork but does not create it (2.16.0 died
+          # with "Could not resolve … metanorma-ci/winget-pkgs"). gh repo
+          # fork is idempotent: an existing fork is a no-op success.
+          gh repo fork microsoft/winget-pkgs --clone=false
+
       - name: Submit the pull request from the metanorma-ci fork
         shell: pwsh
         env:
           CI: 'true'
           # komac reads its token from GITHUB_TOKEN; GH_TOKEN is set as
           # well for any gh-cli fallback. This PAT belongs to the
-          # metanorma-ci account, under which komac forks
-          # microsoft/winget-pkgs and opens the PR.
+          # metanorma-ci account, under which the fork above lives and
+          # komac opens the PR.
           GITHUB_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
           GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
         run: |
