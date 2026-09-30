@@ -7,9 +7,9 @@
 #   ruby tools/sync-payload.rb <version> <registry.yaml>
 #
 # Updates exactly: package.version, and the metanorma payload's
-# release tag + per-triplet file/sha256. Toolkit slices (openjdk,
-# inkscape) and the tebako/runtime pins are deliberately NOT touched —
-# those bumps stay manual. Edits are line-oriented so comments and
+# release tag + per-triplet file/sha256. The other payload slices
+# (openjdk, xml2rfc) and the tebako/runtime pins are deliberately NOT
+# touched — those bumps stay manual. Edits are line-oriented so comments and
 # formatting survive (a Psych round-trip would strip them).
 # Unrecognized shape in either file is a named error (exit 64), never
 # a guess (spec 00 §9).

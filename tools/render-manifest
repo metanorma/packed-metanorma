@@ -24,7 +24,7 @@ created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 # xml2rfc payload row's identity + digests (the provider image pin + the
 # nested python pair), from versions.yaml via pins.rb. Fail-closed: each
 # must be set and non-empty.
-for var in MN_SHA256 INK_VERSION INK_SHA256 JDK_LANG JDK_TEBAKO JDK_EXE_SHA256 JDK_SHA256 \
+for var in MN_SHA256 JDK_LANG JDK_TEBAKO JDK_EXE_SHA256 JDK_SHA256 \
            X2RFC_VERSION X2RFC_SHA256 PY_LANG PY_TEBAKO PY_EXE_SHA256 PY_IMAGE_SHA256 RUNTIME_RUBY; do
     eval "val=\${$var:-}"
     if [ -z "$val" ]; then
@@ -39,8 +39,6 @@ sed -e "s|@@RUNTIME_ROOT@@|$root|g" \
     -e "s|@@VERSION@@|$version|g" \
     -e "s|@@CREATED@@|$created|g" \
     -e "s|@@MN_SHA256@@|$MN_SHA256|g" \
-    -e "s|@@INK_VERSION@@|$INK_VERSION|g" \
-    -e "s|@@INK_SHA256@@|$INK_SHA256|g" \
     -e "s|@@JDK_LANG@@|$JDK_LANG|g" \
     -e "s|@@JDK_TEBAKO@@|$JDK_TEBAKO|g" \
     -e "s|@@JDK_EXE_SHA256@@|$JDK_EXE_SHA256|g" \

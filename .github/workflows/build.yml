@@ -47,7 +47,7 @@ jobs:
       fail-fast: false
       # The windows leg (unparked per #259): versions.yaml's xml2rfc entry
       # carries the x86_64-windows-ucrt payload + nested python pair (the
-      # spec-32 spawn edge rides the same 7-slot layout as POSIX), so the
+      # spec-32 spawn edge rides the same slot layout as POSIX), so the
       # full composition presses, validates, and compiles on windows-ucrt64.
       matrix:
         include:
@@ -179,7 +179,6 @@ jobs:
           mkdir -p "$PAYLOADS"
           mnb="https://github.com/tebako-packages/metanorma/releases/download/$MN_RELEASE"
           jdb="https://github.com/tebako-packages/openjdk/releases/download/$JDK_RELEASE"
-          ikb="https://github.com/tebako-packages/inkscape/releases/download/$INK_RELEASE"
           # spec 32's spawned payload set: the xml2rfc provider image from
           # its feedstock, plus the nested python runtime pair from the
           # runtime factory (the same releases-consumed-downward rule as
@@ -190,7 +189,6 @@ jobs:
           curl -fSL "$mnb/$MN_FILE"  -o "$PAYLOADS/$MN_FILE"
           curl -fSL "$jdb/$JDK_FILE" -o "$PAYLOADS/$JDK_FILE"
           curl -fSL "$jdb/$JDK_EXE_FILE" -o "$PAYLOADS/$JDK_EXE_FILE"
-          curl -fSL "$ikb/$INK_FILE" -o "$PAYLOADS/$INK_FILE"
           curl -fSL "$x2b/$X2RFC_FILE" -o "$PAYLOADS/$X2RFC_FILE"
           curl -fSL "$pyb/$PY_EXE_FILE" -o "$PAYLOADS/$PY_EXE_FILE"
           curl -fSL "$pyb/$PY_IMAGE_FILE" -o "$PAYLOADS/$PY_IMAGE_FILE"
@@ -200,7 +198,6 @@ jobs:
             echo "$MN_SHA256  $MN_FILE"
             echo "$JDK_SHA256  $JDK_FILE"
             echo "$JDK_EXE_SHA256  $JDK_EXE_FILE"
-            echo "$INK_SHA256  $INK_FILE"
             echo "$X2RFC_SHA256  $X2RFC_FILE"
             echo "$PY_EXE_SHA256  $PY_EXE_FILE"
             echo "$PY_IMAGE_SHA256  $PY_IMAGE_FILE"
@@ -217,7 +214,6 @@ jobs:
           mkdir -p "$PAYLOADS"
           mnb="https://github.com/tebako-packages/metanorma/releases/download/$MN_RELEASE"
           jdb="https://github.com/tebako-packages/openjdk/releases/download/$JDK_RELEASE"
-          ikb="https://github.com/tebako-packages/inkscape/releases/download/$INK_RELEASE"
           # spec 32's spawned payload set (same as the POSIX legs): the
           # xml2rfc provider image + the nested python runtime pair.
           x2b="https://github.com/tebako-packages/xml2rfc/releases/download/$X2RFC_RELEASE"
@@ -225,7 +221,6 @@ jobs:
           curl -fSL "$mnb/$MN_FILE"  -o "$PAYLOADS/$MN_FILE"
           curl -fSL "$jdb/$JDK_FILE" -o "$PAYLOADS/$JDK_FILE"
           curl -fSL "$jdb/$JDK_EXE_FILE" -o "$PAYLOADS/$JDK_EXE_FILE"
-          curl -fSL "$ikb/$INK_FILE" -o "$PAYLOADS/$INK_FILE"
           curl -fSL "$x2b/$X2RFC_FILE" -o "$PAYLOADS/$X2RFC_FILE"
           curl -fSL "$pyb/$PY_EXE_FILE" -o "$PAYLOADS/$PY_EXE_FILE"
           curl -fSL "$pyb/$PY_IMAGE_FILE" -o "$PAYLOADS/$PY_IMAGE_FILE"
@@ -234,7 +229,6 @@ jobs:
             echo "$MN_SHA256 *$MN_FILE"
             echo "$JDK_SHA256 *$JDK_FILE"
             echo "$JDK_EXE_SHA256 *$JDK_EXE_FILE"
-            echo "$INK_SHA256 *$INK_FILE"
             echo "$X2RFC_SHA256 *$X2RFC_FILE"
             echo "$PY_EXE_SHA256 *$PY_EXE_FILE"
             echo "$PY_IMAGE_SHA256 *$PY_IMAGE_FILE"
@@ -264,7 +258,6 @@ jobs:
             --image "$PAYLOADS/$MN_FILE:/__tfs__" \
             --image "$PAYLOADS/$JDK_EXE_FILE" \
             --image "$PAYLOADS/$JDK_FILE" \
-            --image "$PAYLOADS/$INK_FILE:/opt/inkscape" \
             --image "$PAYLOADS/$X2RFC_FILE" \
             --image "$PAYLOADS/$PY_EXE_FILE" \
             --image "$PAYLOADS/$PY_IMAGE_FILE" \
@@ -301,7 +294,6 @@ jobs:
             --image "$rel_payloads/$MN_FILE:/__tfs__" \
             --image "$rel_payloads/$JDK_EXE_FILE" \
             --image "$rel_payloads/$JDK_FILE" \
-            --image "$rel_payloads/$INK_FILE:/opt/inkscape" \
             --image "$rel_payloads/$X2RFC_FILE" \
             --image "$rel_payloads/$PY_EXE_FILE" \
             --image "$rel_payloads/$PY_IMAGE_FILE" \
@@ -327,25 +319,25 @@ jobs:
             die.call("launcher_abi != 1") unless pkg["launcher_abi"] == 1
             die.call("runtime_ref mismatch: #{pkg["runtime_ref"].inspect}") unless pkg["runtime_ref"] == ARGV[1]
             slots = j["slots"]
-            die.call("expected 7 slots, got #{slots.length}") unless slots.length == 7
+            die.call("expected 6 slots, got #{slots.length}") unless slots.length == 6
             # spec 30 + spec 32 layout: 0=app, 1=java exe (claimed, never
             # mounted), 2=java env image (claimed, never mounted),
-            # 3=inkscape, 4=xml2rfc provider image (claimed, never
-            # mounted), 5=python exe (claimed, never mounted), 6=python
-            # env image (claimed, never mounted).
+            # 3=xml2rfc provider image (claimed, never mounted), 4=python
+            # exe (claimed, never mounted), 5=python env image (claimed,
+            # never mounted).
             # Every image slot is limnifs: since spec 20 limnifs is the
             # default writer (§6) and every current feedstock/factory
             # builds on a tebako ≥ 2.2.0 toolchain — verified against the
             # published bytes (metanorma 1.17.0-3, openjdk v2.8.21,
-            # inkscape 1.4.3-4, xml2rfc 3.34.2, tebako-runtime-python
+            # xml2rfc 3.34.2, tebako-runtime-python
             # v0.2.7 — all LMFS magic); the runtime mounts both backends.
-            want = ["/__tfs__", "", "", "/opt/inkscape", "", "", ""]
-            fmts = ["limnifs", "auto", "limnifs", "limnifs", "limnifs", "auto", "limnifs"]
+            want = ["/__tfs__", "", "", "", "", ""]
+            fmts = ["limnifs", "auto", "limnifs", "limnifs", "auto", "limnifs"]
             slots.each_with_index do |s, i|
               die.call("slot#{i} mount #{s["mount"].inspect} != #{want[i].inspect}") unless s["mount"] == want[i]
               die.call("slot#{i} format #{s["format"].inspect} != #{fmts[i].inspect}") unless s["format"] == fmts[i]
             end
-            puts "trailer gates OK (lean, abi=1, runtime_ref, 7 slots)"
+            puts "trailer gates OK (lean, abi=1, runtime_ref, 6 slots)"
           RUBY
           set +e
           "$TEBAKO_TOOLS/tebako-pkg" validate "$pkg" > "$RUNNER_TEMP/validate.log" 2>&1
@@ -357,16 +349,16 @@ jobs:
           elif [ "$rc" = 70 ]; then
             # spec 03 §7 fixed-point: an in-image manifest cannot carry its
             # own digest, so feedstocks embed zeros and validate reports
-            # exactly five "manifest blob_sha256 00000000…" slot lines
-            # (slots 0/2/3 — app, java image, inkscape — plus 4/6 — the
+            # exactly four "manifest blob_sha256 00000000…" slot lines
+            # (slots 0/2 — app, java image — plus 3/5 — the
             # xml2rfc provider image and the python env image).
             # Anything else is a real structural failure. The trailing
             # "result: FAILED (exit 70)" summary line is excluded by the
             # em-dash anchor.
             fails=$(grep -c 'digest agreement: FAILED — manifest blob_sha256 00000000' "$RUNNER_TEMP/validate.log" || true)
             total=$(grep -c ': FAILED — ' "$RUNNER_TEMP/validate.log" || true)
-            if [ "$fails" = 5 ] && [ "$total" = 5 ]; then
-              echo "::notice::validate exit 70 with only the five known blob_sha256 fixed-point placeholders — accepted"
+            if [ "$fails" = 4 ] && [ "$total" = 4 ]; then
+              echo "::notice::validate exit 70 with only the four known blob_sha256 fixed-point placeholders — accepted"
             else
               echo "::error::validate exit 70 with unexpected failures (placeholder lines: $fails, total FAILED: $total)"
               exit 1
@@ -394,16 +386,16 @@ jobs:
             die.call("launcher_abi != 1") unless pkg["launcher_abi"] == 1
             die.call("runtime_ref mismatch") unless pkg["runtime_ref"] == ARGV[1]
             # spec 30 + spec 32 layout, same as the POSIX legs: 0=app,
-            # 1=java exe, 2=java env image, 3=inkscape, 4=xml2rfc provider
-            # image, 5=python exe, 6=python env image (the spawned rows
+            # 1=java exe, 2=java env image, 3=xml2rfc provider image,
+            # 4=python exe, 5=python env image (the spawned rows
             # claimed, never mounted).
-            want = ["/__tfs__", "", "", "/opt/inkscape", "", "", ""]
-            fmts = ["limnifs", "auto", "limnifs", "limnifs", "limnifs", "auto", "limnifs"]
-            die.call("expected 7 slots") unless j["slots"].length == 7
+            want = ["/__tfs__", "", "", "", "", ""]
+            fmts = ["limnifs", "auto", "limnifs", "limnifs", "auto", "limnifs"]
+            die.call("expected 6 slots") unless j["slots"].length == 6
             j["slots"].each_with_index do |s, i|
               die.call("slot#{i} mount/format wrong") unless s["mount"] == want[i] && s["format"] == fmts[i]
             end
-            puts "trailer gates OK (lean, abi=1, runtime_ref, 7 slots)"
+            puts "trailer gates OK (lean, abi=1, runtime_ref, 6 slots)"
           RUBY
           set +e
           MSYS2_ARG_CONV_EXCL='*' "$TEBAKO_TOOLS/tebako-pkg.exe" validate "$pkg" > "$RUNNER_TEMP/validate.log" 2>&1
@@ -414,11 +406,11 @@ jobs:
             :
           elif [ "$rc" = 70 ]; then
             # Same fixed-point placeholders as the POSIX leg (see there):
-            # five manifest blob_sha256 00000000… slot lines.
+            # four manifest blob_sha256 00000000… slot lines.
             fails=$(grep -c 'digest agreement: FAILED — manifest blob_sha256 00000000' "$RUNNER_TEMP/validate.log" || true)
             total=$(grep -c ': FAILED — ' "$RUNNER_TEMP/validate.log" || true)
-            if [ "$fails" = 5 ] && [ "$total" = 5 ]; then
-              echo "::notice::validate exit 70 with only the five known blob_sha256 fixed-point placeholders — accepted"
+            if [ "$fails" = 4 ] && [ "$total" = 4 ]; then
+              echo "::notice::validate exit 70 with only the four known blob_sha256 fixed-point placeholders — accepted"
             else
               echo "::error::validate exit 70 with unexpected failures"
               exit 1
@@ -734,12 +726,12 @@ jobs:
 
           Single-executable Metanorma assembled with the tebako v2 pipeline
           (fetch → assemble → validate → publish). Nothing compiles on your
-          machine: the package carries the metanorma/OpenJDK/Inkscape payload
+          machine: the package carries the metanorma/OpenJDK payload
           slices plus the xml2rfc spawned payload with its python runtime
           (spec 32), and resolves the tebako Ruby runtime on first run.
 
           - metanorma payload: $PKG_VERSION (release $MN_RELEASE_NOTE)
-          - OpenJDK slice: $JDK_RELEASE_NOTE · Inkscape slice: $INK_RELEASE_NOTE
+          - OpenJDK slice: $JDK_RELEASE_NOTE
           - xml2rfc slice (spawned payload, spec 32): $X2RFC_RELEASE_NOTE, dispatched on its bundled python runtime
           - runtime: tebako ruby $RUNTIME_RUBY_NOTE (runtime $RUNTIME_TEBAKO_NOTE), resolved via tebako toolchain v$TEBAKO_VERSION
 
