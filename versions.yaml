@@ -170,19 +170,6 @@ payloads:
         sha256: 50a5c272df5b42e96c4e8d2f3bd7dadbb0d6d5c83da2c80d26820fde1995bc57
         exe_file: tebako-runtime-2.8.21-21.0.12-windows-ucrt64.exe
         exe_sha256: b6dc65f4aac1a40bb8be60a125ab98a18e9e1f0397fe7c394dddca551c4051ca
-  - name: inkscape
-    version: 1.4.3 # the slice version (lock.slices[].version)
-    release: 1.4.3-4 # tebako-packages/inkscape tag
-    assets:
-      aarch64-macos:
-        file: inkscape-1.4.3-macos-arm64.tfs
-        sha256: 5211a801149afe317e45fd3ddaf95bf177dabeb67c972e05326ae4a9b6e1805d
-      x86_64-linux-gnu:
-        file: inkscape-1.4.3-linux-gnu-x86_64.tfs
-        sha256: e59caced0ff3de4d788a023999062bbb11fb3c13d04afcfbbd5d51f1cd86f329
-      x86_64-windows-ucrt:
-        file: inkscape-1.4.3-windows-ucrt64.tfs
-        sha256: 1c654f366121eb09c1029e5fa887e75e4348ca5db6723b69de0ab5252a051494
   - name: xml2rfc
     # spec 32's first spawned-PAYLOAD edge: the ietf chain's xml2rfc console
     # script, dispatched as a child process through its own spec-17

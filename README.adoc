@@ -32,8 +32,8 @@ A package is up to three independently distributable parts, glued by the
   (stdlib + gems), two artifacts downloaded once per machine into the
   shared `~/.tebako` cache, sha256-verified, mounted (never extracted);
 * *Payload slices* — bare `.tfs` filesystem images. packed-metanorma carries
-  three: the `metanorma` app itself, an OpenJDK runtime (for mn2pdf), and
-  Inkscape (for SVG processing).
+  the `metanorma` app itself, an OpenJDK runtime (for mn2pdf), and the
+  xml2rfc payload with its bundled python runtime.
 
 The packages built here are *lean*: the payloads ride inside the
 executable, and the runtime pair is resolved on first run from the
@@ -60,9 +60,6 @@ Every byte the pipeline assembles is pinned in `versions.yaml`:
 
 | OpenJDK slice (`tamatebako/tebako-runtime-openjdk`)
 | 21.0.12 (release tag `v2.8.21`)
-
-| Inkscape slice (`tebako-packages/inkscape`)
-| 1.4.3 (release tag `1.4.3-4`)
 |===
 
 Bumping any input is a one-line edit of `versions.yaml`; the workflow,
@@ -132,7 +129,7 @@ rewrites the metanorma block of `versions.yaml`, commits to `main`, and
 tags `v<version>` — the tag push runs the full pipeline and publishes
 the release. The same flow can be started by hand with
 `workflow_dispatch` (`payload_version` input). Bumping the OpenJDK /
-Inkscape slices or the tebako/runtime pins is a manual one-line edit of
+xml2rfc slices or the tebako/runtime pins is a manual one-line edit of
 `versions.yaml` on a PR.
 
 == Known limitations

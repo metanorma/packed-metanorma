@@ -63,7 +63,6 @@ if ARGV.include?("--release")
     "RUNTIME_TEBAKO_NOTE" => runtime.fetch("tebako"),
     "MN_RELEASE_NOTE" => by_name.fetch("metanorma").fetch("release"),
     "JDK_RELEASE_NOTE" => by_name.fetch("openjdk").fetch("release"),
-    "INK_RELEASE_NOTE" => by_name.fetch("inkscape").fetch("release"),
     "X2RFC_RELEASE_NOTE" => by_name.fetch("xml2rfc").fetch("release"),
   }
   notes.each { |k, v| puts "#{k}=#{v}" }
@@ -145,7 +144,6 @@ end
 
 mn_p, mn = slice.call("metanorma")
 jdk_p, jdk = slice.call("openjdk")
-ink_p, ink = slice.call("inkscape")
 # spec 32's spawned payload: the xml2rfc slice + its nested python runtime
 # pair. A triplet with no asset dies here on slice.call's named error: the
 # leg fails CLOSED, never a silent skip of the spawn edge.
@@ -190,13 +188,9 @@ pairs = {
   "JDK_SHA256" => jdk.fetch("sha256"),
   "JDK_EXE_FILE" => jdk.fetch("exe_file"),
   "JDK_EXE_SHA256" => jdk.fetch("exe_sha256"),
-  "INK_RELEASE" => ink_p.fetch("release"),
-  "INK_VERSION" => ink_p.fetch("version"),
-  "INK_FILE" => ink.fetch("file"),
-  "INK_SHA256" => ink.fetch("sha256"),
   # The spawned-payload identity (spec 32 §6): the provider payload's
   # version + image pin, and the NESTED python runtime row's version pair
-  # + pair pins (the trio rides slots 4-6, claimed by the lock's spawned[]
+  # + pair pins (the trio rides slots 3-5, claimed by the lock's spawned[]
   # payload row — never mounted by the parent).
   "X2RFC_RELEASE" => x2_p.fetch("release"),
   "X2RFC_VERSION" => x2_p.fetch("version"),
