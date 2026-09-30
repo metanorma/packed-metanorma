@@ -130,17 +130,17 @@ installers:
 payloads:
   - name: metanorma
     version: 1.17.0 # the slice version (lock.slices[].version)
-    release: 1.17.0-3 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
+    release: 1.17.0-5 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
     assets:
       aarch64-macos:
         file: metanorma-1.17.0-macos-arm64.tfs
-        sha256: 018012581363d4e31cf4dc057df77c659399410cc07ca52c1e024706acd7e627
+        sha256: 41f5d5ef49a7ba8aa62b709e358aa42032d7c8b292949f88b8955c7ce8b9255c
       x86_64-linux-gnu:
         file: metanorma-1.17.0-linux-gnu-x86_64.tfs
-        sha256: a8fa4de02c907388cc962529f722cd1eb9010b37e31646e2e08c6890fe5b2902
+        sha256: 22fa3190540030f66511243cbd1056a39396f9b7adbf61944c9e1a380ea285a4
       x86_64-windows-ucrt:
         file: metanorma-1.17.0-windows-ucrt64.tfs
-        sha256: 'ca82fa714f0b057b647018733f1359878b5f7f40485d13192446752acd5ac589'
+        sha256: edf939f6e73eeb4c9a9642fcaf0328063fd07f013a5124cf903da122641a91d9
   - name: openjdk
     # openjdk is a RUNTIME-kind payload: the feedstock release names the
     # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
