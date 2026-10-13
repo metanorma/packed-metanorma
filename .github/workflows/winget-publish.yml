@@ -220,8 +220,8 @@ jobs:
           echo "$dir" >> $env:GITHUB_PATH
           komac --version
 
-      - if: steps.dupcheck.outputs.skip == 'false'
       - name: Ensure the metanorma-ci winget-pkgs fork exists
+        if: steps.dupcheck.outputs.skip == 'false'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
@@ -231,8 +231,8 @@ jobs:
           # fork is idempotent: an existing fork is a no-op success.
           gh repo fork microsoft/winget-pkgs --clone=false
 
-      - if: steps.dupcheck.outputs.skip == 'false'
       - name: Submit the pull request from the metanorma-ci fork
+        if: steps.dupcheck.outputs.skip == 'false'
         shell: pwsh
         env:
           CI: 'true'
