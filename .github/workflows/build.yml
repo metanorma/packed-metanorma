@@ -43,21 +43,16 @@ jobs:
   press:
     name: press (${{ matrix.triplet }})
     runs-on: ${{ matrix.os }}
-    # The musl legs press inside the musl toolchain container (the
-    # tpkg-builder image — musl binaries execute only there; the existing
-    # legs carry no container key and run on the runner). The whole job
-    # runs inside it when the row declares one.
-    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       # The windows leg (unparked per #259): versions.yaml's xml2rfc entry
       # carries the x86_64-windows-ucrt payload + nested python pair (the
       # spec-32 spawn edge rides the same slot layout as POSIX), so the
       # full composition presses, validates, and compiles on windows-ucrt64.
-      # The musl pair (the Alpine lane, task 33): the temurin musl runtime
-      # pairs publish from tebako-runtime-openjdk v2.8.28, and the payload
-      # musl rows (metanorma 1.17.0, xml2rfc 3.34.1 + the nested python
-      # pair) mirror the published registries.
+      # The musl (Alpine) lane's pin rows are staged in versions.yaml; its
+      # press legs land with the container-leg runner (the GitHub
+      # limitation: a job-level Alpine container cannot run JS actions on
+      # the arm64 runner, so the musl legs ride the docker-run idiom).
       matrix:
         include:
           - triplet: aarch64-macos
@@ -72,16 +67,6 @@ jobs:
             os: windows-latest
             tool: windows-ucrt64
             legacy: metanorma-windows-x86_64.exe
-          - triplet: x86_64-linux-musl
-            os: ubuntu-24.04
-            tool: linux-musl-x86_64
-            legacy: metanorma-linux-musl-x86_64
-            container: ghcr.io/tamatebako/tpkg-builder-x86_64-linux-musl:v1
-          - triplet: aarch64-linux-musl
-            os: ubuntu-24.04-arm
-            tool: linux-musl-arm64
-            legacy: metanorma-linux-musl-arm64
-            container: ghcr.io/tamatebako/tpkg-builder-aarch64-linux-musl:v1
     env:
       LEGACY: ${{ matrix.legacy }}
     steps:
@@ -724,8 +709,6 @@ jobs:
           cp stage/dist-aarch64-macos/metanorma-darwin-arm64.tgz* rel/
           cp stage/dist-x86_64-linux-gnu/metanorma-linux-x86_64.tgz* rel/
           cp stage/dist-x86_64-windows-ucrt/metanorma-windows-x86_64.exe* rel/
-          cp stage/dist-x86_64-linux-musl/metanorma-linux-musl-x86_64.tgz* rel/
-          cp stage/dist-aarch64-linux-musl/metanorma-linux-musl-arm64.tgz* rel/
           ls -l rel
       - name: Release notes
         env:
@@ -766,8 +749,6 @@ jobs:
           |---|---|
           | macOS (Apple Silicon) | metanorma-darwin-arm64.tgz |
           | Linux (x86_64) | metanorma-linux-x86_64.tgz |
-          | Linux (x86_64, musl — Alpine) | metanorma-linux-musl-x86_64.tgz |
-          | Linux (aarch64, musl — Alpine) | metanorma-linux-musl-arm64.tgz |
           | Windows (x86_64) | metanorma-windows-x86_64.exe (also .zip) |
           EOF
           if [ "${APPLE_INSTALLER_SIGNING_ENABLED:-}" = "true" ] && [ "${APPLE_SIGNING_ENABLED:-}" = "true" ]; then
