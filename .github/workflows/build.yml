@@ -49,10 +49,10 @@ jobs:
       # carries the x86_64-windows-ucrt payload + nested python pair (the
       # spec-32 spawn edge rides the same slot layout as POSIX), so the
       # full composition presses, validates, and compiles on windows-ucrt64.
-      # The musl (Alpine) lane's pin rows are staged in versions.yaml; its
-      # press legs land with the container-leg runner (the GitHub
+      # The musl (Alpine) lane rides the container-leg runner (the GitHub
       # limitation: a job-level Alpine container cannot run JS actions on
-      # the arm64 runner, so the musl legs ride the docker-run idiom).
+      # the arm64 runner, so the musl legs use the docker-run idiom — one
+      # host step runs tools/container_leg inside the tpkg-builder image).
       matrix:
         include:
           - triplet: aarch64-macos
@@ -67,6 +67,22 @@ jobs:
             os: windows-latest
             tool: windows-ucrt64
             legacy: metanorma-windows-x86_64.exe
+          # The musl (Alpine) pair: the whole press rides inside the
+          # tpkg-builder container (the docker-run idiom — a job-level
+          # container key cannot run JS actions on the arm64 runner).
+          # The container legs' fetch/press/validate/compile all run in
+          # tools/container_leg; the host keeps checkout + pins + the
+          # upload/release.
+          - triplet: x86_64-linux-musl
+            os: ubuntu-24.04
+            tool: linux-musl-x86_64
+            legacy: metanorma-linux-musl-x86_64
+            container: ghcr.io/tamatebako/tpkg-builder-x86_64-linux-musl:v1
+          - triplet: aarch64-linux-musl
+            os: ubuntu-24.04-arm
+            tool: linux-musl-arm64
+            legacy: metanorma-linux-musl-arm64
+            container: ghcr.io/tamatebako/tpkg-builder-aarch64-linux-musl:v1
     env:
       LEGACY: ${{ matrix.legacy }}
     steps:
@@ -118,8 +134,38 @@ jobs:
             echo "PAYLOADS=$tmp/payloads"
           } >> "$GITHUB_ENV"
 
+      # The musl legs (x86_64/aarch64-linux-musl): fetch + press + validate
+      # + smoke + compile all run INSIDE the tpkg-builder container — the
+      # pinned musl binaries (tebako-pkg, tfs, bootstrap) and the pressed
+      # musl package execute only under musl libc, and the smoke/compile
+      # gates execute them. tools/container_leg is the in-container mirror
+      # of the POSIX arms, ending with the chown handback (root in the
+      # container writes root-owned files onto the bind mount; the host's
+      # upload/release steps must read them). The pins flow from the host's
+      # pins.rb step through $GITHUB_ENV — this step carries no version or
+      # digest literals. The workspace bind-mounts at its host path so
+      # $GITHUB_WORKSPACE stays valid in-container (fixtures/, tools/).
+      - name: Press + validate + smoke + compile (container legs)
+        if: matrix.container != null
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e TEBAKO_RELEASE -e TEBAKO_PKG_ASSET -e TEBAKO_PKG_SHA256 \
+            -e TEBAKO_BOOTSTRAP_ASSET -e TEBAKO_BOOTSTRAP_SHA256 \
+            -e TFS_ASSET -e TFS_SHA256 \
+            -e RUNTIME_REF -e RUNTIME_ROOT -e LAUNCHER_ABI \
+            -e PKG_VERSION -e LEGACY \
+            -e MN_RELEASE -e MN_FILE -e MN_SHA256 \
+            -e JDK_RELEASE -e JDK_FILE -e JDK_SHA256 -e JDK_EXE_FILE -e JDK_EXE_SHA256 \
+            -e X2RFC_RELEASE -e X2RFC_FILE -e X2RFC_SHA256 \
+            -e PY_RELEASE -e PY_EXE_FILE -e PY_EXE_SHA256 -e PY_IMAGE_FILE -e PY_IMAGE_SHA256 \
+            -e GITHUB_WORKSPACE \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
+            "${{ matrix.container }}" \
+            bash tools/container_leg
+
       - name: Fetch tebako toolchain (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           mkdir -p "$TEBAKO_TOOLS" "$TEBAKO_BOOT"
@@ -177,7 +223,7 @@ jobs:
           echo "toolchain OK"
 
       - name: Fetch payload slices (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           mkdir -p "$PAYLOADS"
@@ -241,7 +287,7 @@ jobs:
           ls -l
 
       - name: Render package manifest (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: sh tools/render-manifest "$RUNTIME_ROOT" "$RUNTIME_REF" "$PKG_VERSION" "$RUNNER_TEMP/pkg.yaml"
 
       - name: Render package manifest (Windows)
@@ -252,7 +298,7 @@ jobs:
           sh tools/render-manifest "$RUNTIME_ROOT" "$RUNTIME_REF" "$PKG_VERSION" "$RUNNER_TEMP/pkg.yaml"
 
       - name: Assemble package (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -309,7 +355,7 @@ jobs:
           ls -l dist
 
       - name: Structural gates (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           pkg="dist/$LEGACY"
@@ -425,7 +471,7 @@ jobs:
           fi
 
       - name: Smoke (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           "dist/$LEGACY" --version 2>&1 | tee "$RUNNER_TEMP/smoke.log"
@@ -435,7 +481,7 @@ jobs:
           }
 
       - name: argv0 dispatch smoke — fontist (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           # The L2 entries mirror the payload's complete declared inventory
@@ -497,7 +543,7 @@ jobs:
           fi
 
       - name: Compile xml+html (OIML — jing/schema validation)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         timeout-minutes: 15
         # r060-1 proves the schema/argv-bridge stack on every leg. Fonts are
         # continued-past: the OIML theme declares Futura PT (commercial, no
@@ -523,7 +569,7 @@ jobs:
           test -s document.html || { echo "::error::compile produced no document.html"; exit 1; }
 
       - name: Compile PDF (ISO — the full font pipeline)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         timeout-minutes: 30
         # The PDF acceptance runs the ISO flavour with font install ENABLED:
         # ISO's fonts (Cambria, Times New Roman, Source Han Sans, Inter…)
@@ -611,7 +657,7 @@ jobs:
           ps aux 2>/dev/null | grep -iE "java|jing|ruby|metanorma|tebako" | grep -v grep || true
 
       - name: Package artifacts (POSIX)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.container == null
         run: |
           set -euo pipefail
           mkdir -p dist/final
@@ -709,6 +755,8 @@ jobs:
           cp stage/dist-aarch64-macos/metanorma-darwin-arm64.tgz* rel/
           cp stage/dist-x86_64-linux-gnu/metanorma-linux-x86_64.tgz* rel/
           cp stage/dist-x86_64-windows-ucrt/metanorma-windows-x86_64.exe* rel/
+          cp stage/dist-x86_64-linux-musl/metanorma-linux-musl-x86_64.tgz* rel/
+          cp stage/dist-aarch64-linux-musl/metanorma-linux-musl-arm64.tgz* rel/
           ls -l rel
       - name: Release notes
         env:
@@ -749,6 +797,8 @@ jobs:
           |---|---|
           | macOS (Apple Silicon) | metanorma-darwin-arm64.tgz |
           | Linux (x86_64) | metanorma-linux-x86_64.tgz |
+          | Linux (x86_64, Alpine/musl) | metanorma-linux-musl-x86_64.tgz |
+          | Linux (arm64, Alpine/musl) | metanorma-linux-musl-arm64.tgz |
           | Windows (x86_64) | metanorma-windows-x86_64.exe (also .zip) |
           EOF
           if [ "${APPLE_INSTALLER_SIGNING_ENABLED:-}" = "true" ] && [ "${APPLE_SIGNING_ENABLED:-}" = "true" ]; then
@@ -796,6 +846,10 @@ jobs:
             rel/metanorma-darwin-arm64.tgz.sha256.txt
             rel/metanorma-linux-x86_64.tgz
             rel/metanorma-linux-x86_64.tgz.sha256.txt
+            rel/metanorma-linux-musl-x86_64.tgz
+            rel/metanorma-linux-musl-x86_64.tgz.sha256.txt
+            rel/metanorma-linux-musl-arm64.tgz
+            rel/metanorma-linux-musl-arm64.tgz.sha256.txt
             rel/metanorma-windows-x86_64.exe
             rel/metanorma-windows-x86_64.exe.sha256.txt
             rel/metanorma-windows-x86_64.exe.zip

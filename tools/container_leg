@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# tools/container_leg — the musl legs' press + validate + smoke + compile,
+# run INSIDE the tpkg-builder container (alpine, musl libc) by build.yml's
+# container step. A leg whose matrix row carries `container:` cannot run
+# the host steps: the pinned musl binaries (tebako-pkg, tfs, bootstrap)
+# and the pressed musl package execute only under musl, and the smoke /
+# compile gates execute them. The host keeps the arch-independent steps
+# (checkout, pins.rb, the artifact upload, the tag-run release).
+#
+# This script is the in-container mirror of the workflow's POSIX arms
+# (fetch + verify, render, assemble, gates, smokes, compiles, dist
+# assembly) — same pins, same sha256 verification, same monolith
+# cross-check — ending with the chown handback (root in the container
+# writes root-owned files onto the bind mount; the host's upload/release
+# steps must read them).
+#
+# Inputs (env, forwarded by the workflow's `docker run -e` list; the pins
+# themselves flow from versions.yaml via the host's pins.rb step — this
+# script carries NO version or digest literals):
+#   TEBAKO_RELEASE / TEBAKO_{PKG,BOOTSTRAP}_ASSET(+_SHA256) / TFS_*  the toolchain pins
+#   RUNTIME_REF / RUNTIME_RUBY / RUNTIME_TEBAKO / RUNTIME_ROOT / LAUNCHER_ABI
+#   PKG_VERSION / LEGACY / EXE_SUFFIX
+#   MN_* / JDK_* / X2RFC_* / PY_*                            the payload pins
+#   GITHUB_WORKSPACE (the mount target), GITHUB_REF_NAME
+set -euo pipefail
+
+step() { printf '\n== %s\n' "$*"; }
+
+# The pins' env arrives on the host's $GITHUB_ENV via pins.rb --env; the
+# docker run -e list forwards it. In-container working dirs:
+export TEBAKO_HOME=/tmp/tebako-home
+TEBAKO_TOOLS=/tmp/tebako-tools
+TEBAKO_BOOT=/tmp/tebako-boot
+PAYLOADS=/tmp/payloads
+RUNNER_TEMP=/tmp
+mkdir -p "$TEBAKO_HOME" "$TEBAKO_TOOLS" "$TEBAKO_BOOT" "$PAYLOADS" dist
+
+step "fetch the tebako toolchain ($TEBAKO_RELEASE, pinned by versions.yaml)"
+base="https://github.com/tamatebako/tebako/releases/download/$TEBAKO_RELEASE"
+curl -fSL "$base/$TEBAKO_PKG_ASSET"        -o "$TEBAKO_TOOLS/tebako-pkg"
+curl -fSL "$base/$TFS_ASSET"               -o "$TEBAKO_TOOLS/tfs"
+curl -fSL "$base/$TEBAKO_BOOTSTRAP_ASSET"  -o "$TEBAKO_BOOT/tebako-bootstrap"
+curl -fSL "$base/SHA256SUMS"               -o /tmp/tebako-SHA256SUMS
+chmod +x "$TEBAKO_TOOLS/tebako-pkg" "$TEBAKO_TOOLS/tfs" "$TEBAKO_BOOT/tebako-bootstrap"
+{
+  echo "$TEBAKO_PKG_SHA256  $TEBAKO_TOOLS/tebako-pkg"
+  echo "$TFS_SHA256  $TEBAKO_TOOLS/tfs"
+  echo "$TEBAKO_BOOTSTRAP_SHA256  $TEBAKO_BOOT/tebako-bootstrap"
+} > /tmp/local-sums.txt
+sha256sum -c /tmp/local-sums.txt
+# Cross-check the pins against the release's own SHA256SUMS
+for pair in "$TEBAKO_PKG_ASSET:$TEBAKO_PKG_SHA256" "$TFS_ASSET:$TFS_SHA256" "$TEBAKO_BOOTSTRAP_ASSET:$TEBAKO_BOOTSTRAP_SHA256"; do
+  asset="${pair%%:*}"; want="${pair##*:}"
+  got=$(awk -v a="$asset" '$2 == a {print $1}' /tmp/tebako-SHA256SUMS | tr 'A-F' 'a-f')
+  [ "$got" = "$want" ] || { echo "::error::pin mismatch for $asset: versions.yaml=$want release=$got"; exit 1; }
+done
+echo "toolchain OK"
+
+step "fetch the payload slices (the metanorma app + the java pair + the xml2rfc spawned set)"
+mnb="https://github.com/tebako-packages/metanorma/releases/download/$MN_RELEASE"
+jdb="https://github.com/tebako-packages/openjdk/releases/download/$JDK_RELEASE"
+x2b="https://github.com/tebako-packages/xml2rfc/releases/download/$X2RFC_RELEASE"
+pyb="https://github.com/tamatebako/tebako-runtime-python/releases/download/$PY_RELEASE"
+curl -fSL "$mnb/$MN_FILE"       -o "$PAYLOADS/$MN_FILE"
+curl -fSL "$jdb/$JDK_FILE"      -o "$PAYLOADS/$JDK_FILE"
+curl -fSL "$jdb/$JDK_EXE_FILE"  -o "$PAYLOADS/$JDK_EXE_FILE"
+curl -fSL "$x2b/$X2RFC_FILE"    -o "$PAYLOADS/$X2RFC_FILE"
+curl -fSL "$pyb/$PY_EXE_FILE"   -o "$PAYLOADS/$PY_EXE_FILE"
+curl -fSL "$pyb/$PY_IMAGE_FILE" -o "$PAYLOADS/$PY_IMAGE_FILE"
+chmod +x "$PAYLOADS/$PY_EXE_FILE"
+cd "$PAYLOADS"
+{
+  echo "$MN_SHA256  $MN_FILE"
+  echo "$JDK_SHA256  $JDK_FILE"
+  echo "$JDK_EXE_SHA256  $JDK_EXE_FILE"
+  echo "$X2RFC_SHA256  $X2RFC_FILE"
+  echo "$PY_EXE_SHA256  $PY_EXE_FILE"
+  echo "$PY_IMAGE_SHA256  $PY_IMAGE_FILE"
+} > sums.txt
+sha256sum -c sums.txt
+cd - >/dev/null
+echo "payloads OK"
+
+step "render the package manifest"
+sh tools/render-manifest "$RUNTIME_ROOT" "$RUNTIME_REF" "$PKG_VERSION" /tmp/pkg.yaml
+
+step "assemble the package"
+"$TEBAKO_TOOLS/tebako-pkg" bundle \
+  --bootstrap "$TEBAKO_BOOT/tebako-bootstrap" \
+  --exact-mounts \
+  --image "$PAYLOADS/$MN_FILE:/__tfs__" \
+  --image "$PAYLOADS/$JDK_EXE_FILE" \
+  --image "$PAYLOADS/$JDK_FILE" \
+  --image "$PAYLOADS/$X2RFC_FILE" \
+  --image "$PAYLOADS/$PY_EXE_FILE" \
+  --image "$PAYLOADS/$PY_IMAGE_FILE" \
+  --runtime-ref "$RUNTIME_REF" \
+  --package-manifest /tmp/pkg.yaml \
+  --launcher-abi "$LAUNCHER_ABI" \
+  --lean \
+  -o "dist/$LEGACY"
+chmod +x "dist/$LEGACY"
+ls -l dist
+
+step "structural gates"
+pkg="dist/$LEGACY"
+"$TEBAKO_TOOLS/tebako-pkg" info --json "$pkg" > /tmp/info.json
+ruby - /tmp/info.json "$RUNTIME_REF" <<'RUBY'
+  require "json"
+  j = JSON.parse(File.read(ARGV[0]))
+  die = ->(msg) { warn "::error::#{msg}"; exit 1 }
+  pkg = j["package"] or die.call("no package block in info json")
+  die.call("expected lean flag, got #{pkg["flags"].inspect}") unless pkg["flags"].include?("lean")
+  die.call("launcher_abi != 1") unless pkg["launcher_abi"] == 1
+  die.call("runtime_ref mismatch: #{pkg["runtime_ref"].inspect}") unless pkg["runtime_ref"] == ARGV[1]
+  slots = j["slots"]
+  die.call("expected 6 slots, got #{slots.length}") unless slots.length == 6
+  want = ["/__tfs__", "", "", "", "", ""]
+  fmts = ["limnifs", "auto", "limnifs", "limnifs", "auto", "limnifs"]
+  slots.each_with_index do |s, i|
+    die.call("slot#{i} mount #{s["mount"].inspect} != #{want[i].inspect}") unless s["mount"] == want[i]
+    die.call("slot#{i} format #{s["format"].inspect} != #{fmts[i].inspect}") unless s["format"] == fmts[i]
+  end
+  puts "trailer gates OK (lean, abi=1, runtime_ref, 6 slots)"
+RUBY
+set +e
+"$TEBAKO_TOOLS/tebako-pkg" validate "$pkg" > /tmp/validate.log 2>&1
+rc=$?
+set -e
+cat /tmp/validate.log
+if [ "$rc" = 0 ]; then
+  :
+elif [ "$rc" = 70 ]; then
+  # spec 03 §7 fixed-point placeholders (the four known blob_sha256
+  # zeros) are accepted; anything else is a real structural failure.
+  fails=$(grep -c 'digest agreement: FAILED — manifest blob_sha256 00000000' /tmp/validate.log || true)
+  total=$(grep -c ': FAILED — ' /tmp/validate.log || true)
+  if [ "$fails" = 4 ] && [ "$total" = 4 ]; then
+    echo "::notice::validate exit 70 with only the four known blob_sha256 fixed-point placeholders — accepted"
+  else
+    echo "::error::validate exit 70 with unexpected failures (placeholder lines: $fails, total FAILED: $total)"
+    exit 1
+  fi
+else
+  echo "::error::tebako-pkg validate failed with exit $rc"
+  exit 1
+fi
+
+step "smoke"
+"dist/$LEGACY" --version 2>&1 | tee /tmp/smoke.log
+grep -q "Metanorma::Cli $PKG_VERSION" /tmp/smoke.log || {
+  echo "::error::smoke output does not contain 'Metanorma::Cli $PKG_VERSION'"
+  exit 1
+}
+
+step "argv0 dispatch smoke — fontist"
+cp "dist/$LEGACY" /tmp/fontist
+/tmp/fontist --help 2>&1 | tee /tmp/smoke-fontist.log
+grep -q "fontist " /tmp/smoke-fontist.log || {
+  echo "::error::argv0 fontist smoke did not print the fontist command list"
+  exit 1
+}
+
+step "compile xml+html (OIML — jing/schema validation)"
+mkdir -p /tmp/compile
+cd fixtures/r060-1
+set +e
+"$GITHUB_WORKSPACE/tools/with-timeout" 780 \
+  "$GITHUB_WORKSPACE/dist/$LEGACY" compile -t oiml -x xml,html --agree-to-terms --continue-without-fonts document.adoc 2>&1 | tee /tmp/compile/compile-xml-html.log
+rc=${PIPESTATUS[0]}
+set -e
+if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+  echo "::error::compile TIMED OUT after 780s (rc=$rc) — last log lines:"
+  tail -50 /tmp/compile/compile-xml-html.log || true
+  exit 1
+fi
+[ "$rc" -eq 0 ] || { echo "::error::compile exited $rc"; exit "$rc"; }
+test -s document.xml || { echo "::error::compile produced no document.xml"; exit 1; }
+test -s document.html || { echo "::error::compile produced no document.html"; exit 1; }
+cd - >/dev/null
+
+step "compile PDF (ISO — the full font pipeline)"
+cd fixtures/iso-test
+set +e
+"$GITHUB_WORKSPACE/tools/with-timeout" 1500 \
+  "$GITHUB_WORKSPACE/dist/$LEGACY" compile -t iso -x pdf --agree-to-terms document.adoc 2>&1 | tee /tmp/compile/compile-pdf.log
+rc=${PIPESTATUS[0]}
+set -e
+if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+  echo "::error::compile TIMED OUT after 1500s (rc=$rc) — last log lines:"
+  tail -50 /tmp/compile/compile-pdf.log || true
+  exit 1
+fi
+[ "$rc" -eq 0 ] || { echo "::error::compile exited $rc"; exit "$rc"; }
+test -s document.pdf || { echo "::error::compile produced no document.pdf"; exit 1; }
+cd - >/dev/null
+
+step "package artifacts"
+mkdir -p dist/final
+tar -C dist -czf "dist/final/$LEGACY.tgz" "$LEGACY"
+cd dist/final
+sha256sum "$LEGACY.tgz" | awk '{print $1}' > "$LEGACY.tgz.sha256.txt"
+ls -l
+
+# The chown handback: root in the container wrote root-owned files onto
+# the bind mount; the host's upload/release steps must read them.
+chown -R "$(stat -c '%u:%g' "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE" 2>/dev/null || true
+
+echo "container leg OK"
