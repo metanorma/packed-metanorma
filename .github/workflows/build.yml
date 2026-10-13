@@ -110,7 +110,11 @@ jobs:
         # $GITHUB_ENV from here). TEBAKO_HOME is the runtime cache the
         # smoke/compile runs download into.
         run: |
-          ruby tools/pins.rb "${{ matrix.triplet }}" "${{ matrix.tool }}" --env >> "$GITHUB_ENV"
+          # pins.env beside $GITHUB_ENV: the container legs forward the pin
+          # set to docker via --env-file (drift-proof — a new pin rides
+          # along without an edit to the -e list).
+          ruby tools/pins.rb "${{ matrix.triplet }}" "${{ matrix.tool }}" --env > "$RUNNER_TEMP/pins.env"
+          cat "$RUNNER_TEMP/pins.env" >> "$GITHUB_ENV"
           {
             echo "TEBAKO_HOME=$RUNNER_TEMP/tebako-home"
             echo "TEBAKO_TOOLS=$RUNNER_TEMP/tebako-tools"
@@ -142,24 +146,16 @@ jobs:
       # of the POSIX arms, ending with the chown handback (root in the
       # container writes root-owned files onto the bind mount; the host's
       # upload/release steps must read them). The pins flow from the host's
-      # pins.rb step through $GITHUB_ENV — this step carries no version or
-      # digest literals. The workspace bind-mounts at its host path so
-      # $GITHUB_WORKSPACE stays valid in-container (fixtures/, tools/).
+      # pins.rb step via --env-file (drift-proof — a new pin rides along
+      # without an edit here). The workspace bind-mounts at its host path
+      # so $GITHUB_WORKSPACE stays valid in-container (fixtures/, tools/).
       - name: Press + validate + smoke + compile (container legs)
         if: matrix.container != null
         run: |
           set -euo pipefail
           docker run --rm \
-            -e TEBAKO_RELEASE -e TEBAKO_PKG_ASSET -e TEBAKO_PKG_SHA256 \
-            -e TEBAKO_BOOTSTRAP_ASSET -e TEBAKO_BOOTSTRAP_SHA256 \
-            -e TFS_ASSET -e TFS_SHA256 \
-            -e RUNTIME_REF -e RUNTIME_ROOT -e LAUNCHER_ABI \
-            -e PKG_VERSION -e LEGACY \
-            -e MN_RELEASE -e MN_FILE -e MN_SHA256 \
-            -e JDK_RELEASE -e JDK_FILE -e JDK_SHA256 -e JDK_EXE_FILE -e JDK_EXE_SHA256 \
-            -e X2RFC_RELEASE -e X2RFC_FILE -e X2RFC_SHA256 \
-            -e PY_RELEASE -e PY_EXE_FILE -e PY_EXE_SHA256 -e PY_IMAGE_FILE -e PY_IMAGE_SHA256 \
-            -e GITHUB_WORKSPACE \
+            --env-file "$RUNNER_TEMP/pins.env" \
+            -e LEGACY -e GITHUB_WORKSPACE \
             -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
             "${{ matrix.container }}" \
             bash tools/container_leg
