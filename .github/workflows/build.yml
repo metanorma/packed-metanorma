@@ -49,6 +49,10 @@ jobs:
       # carries the x86_64-windows-ucrt payload + nested python pair (the
       # spec-32 spawn edge rides the same slot layout as POSIX), so the
       # full composition presses, validates, and compiles on windows-ucrt64.
+      # The musl (Alpine) lane's pin rows are staged in versions.yaml; its
+      # press legs land with the container-leg runner (the GitHub
+      # limitation: a job-level Alpine container cannot run JS actions on
+      # the arm64 runner, so the musl legs ride the docker-run idiom).
       matrix:
         include:
           - triplet: aarch64-macos
@@ -482,7 +486,7 @@ jobs:
           set -euo pipefail
           TEBAKO_TOOLS=$(cygpath -u "$TEBAKO_TOOLS")
           home="$(cygpath -m "$TEBAKO_HOME")"
-          img="$home/runtimes/ruby-${RUNTIME_RUBY}-${RUNTIME_TEBAKO}-windows-ucrt64/tebako-runtime-${RUNTIME_TEBAKO}-${RUNTIME_RUBY}-windows-ucrt64.tfs"
+          img="$home/runtimes/ruby-${RUNTIME_RUBY}-${RUNTIME_TEBAKO}-windows-ucrt64/tebako-runtime-${RUNTIME_TEBAKO}-ruby-${RUNTIME_RUBY}-windows-ucrt64.tfs"
           pem="$(cygpath -u "$RUNNER_TEMP")/compile/cacert.pem"
           mkdir -p "$(dirname "$pem")"
           if [ -f "$img" ]; then
