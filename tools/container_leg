@@ -14,9 +14,10 @@
 # writes root-owned files onto the bind mount; the host's upload/release
 # steps must read them).
 #
-# Inputs (env, forwarded by the workflow's `docker run -e` list; the pins
-# themselves flow from versions.yaml via the host's pins.rb step — this
-# script carries NO version or digest literals):
+# Inputs (env, forwarded by the workflow's `docker run --env-file` of the
+# pins.rb --env output; the pins themselves flow from versions.yaml via
+# the host's pins.rb step — this script carries NO version or digest
+# literals):
 #   TEBAKO_RELEASE / TEBAKO_{PKG,BOOTSTRAP}_ASSET(+_SHA256) / TFS_*  the toolchain pins
 #   RUNTIME_REF / RUNTIME_RUBY / RUNTIME_TEBAKO / RUNTIME_ROOT / LAUNCHER_ABI
 #   PKG_VERSION / LEGACY / EXE_SUFFIX
