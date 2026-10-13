@@ -1,7 +1,9 @@
 #!/bin/bash
 # with-timeout SECONDS CMD [ARGS...] — portable timeout(1) for the build
 # workflow: GNU timeout where it exists (linux, msys2), a background
-# watchdog elsewhere (macOS has no GNU timeout). Exit 124 signals a
+# watchdog elsewhere (macOS has no timeout at all; BusyBox timeout under
+# the musl container legs parses only short options and reports a
+# TERM-killed child as 143, not the 124 contract). Exit 124 signals a
 # timeout either way (the diagnostics steps key on it).
 #
 # Watchdog limitation: only the direct child is signalled (no process-group
@@ -9,10 +11,14 @@
 # the workflow's diagnostics step.
 secs=$1; shift
 
-if command -v timeout >/dev/null 2>&1; then
+if command -v timeout >/dev/null 2>&1 && timeout --signal=TERM --kill-after=10 1 true 2>/dev/null; then
+  # GNU timeout (linux, msys2) — the long-option form.
   exec timeout --signal=TERM --kill-after=10 "$secs" "$@"
 fi
 
+# No GNU timeout: macOS (none) or BusyBox (the musl container legs — it
+# parses only short options AND reports a TERM-killed child as 143, not
+# the 124 contract) — the watchdog path keeps the contract exactly.
 "$@" &
 pid=$!
 marker=$(mktemp)
