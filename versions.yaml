@@ -31,49 +31,49 @@
 schema_version: 1
 
 tebako:
-  version: 2.8.29
-  release: v2.8.29
+  version: 2.8.67
+  release: v2.8.67
   sha256:
-    tebako-pkg:
-      macos-arm64: 330e89d6436b377868da2d818e68bfa53f2b80eb14846ff2973edd3994ca1991
-      macos-x86_64: c7a888b657d4194358ded15741a5417080a4cb7efc5ce15f590ae2dc02ed24cb
-      linux-gnu-x86_64: cee02e50d7ba36de5e329ef47bf65bdcc779abadf7e3e4ba1914fe8b796c2289
-      windows-ucrt64: a09ff9b7b74f6bfdb3249360def1492119c65816b4871b98b93059fc106fe12f
-      linux-musl-x86_64: 7e5980a49a89319645ece441aa72bae0b11c73a7e710e34706709c0588f70432
-      linux-musl-arm64: e9635c216c95532672dd82598e5341690037ededd7209bdca00c42832d36acc0
-    tebako-bootstrap:
-      macos-arm64: f490c2b23fe3d0a099f11f9b5b2a38c8be9b88ec9d85a3c2c6323913afe3144e
-      macos-x86_64: f63cc9a3f724fa33b002377bfa3bb57d06833484e81f94f63cdae25e3f54d6eb
-      linux-gnu-x86_64: d7be002d9f758a54ab267806b6c3ac430e3af53bdc47ddfe685dfb99878e6e56
-      windows-ucrt64: fc7fd985601257618d67bd5115d86aea48e1cdded02a4482c356e55509b396a4
-      linux-musl-x86_64: 358445533201fe1cc1ca14fba7f7322dfef09fe91977e9a262379b50d9a0a066
-      linux-musl-arm64: a312025e45e2a12554ffb099bbe38baa98f46d6d2052cf1c299ba29e8346d1d9
-    tfs:
-      macos-arm64: ddee66f6ef4b9b12a02559aa6e0fb2178461f733d7d2e7fb7380564cb72aa64a
-      macos-x86_64: 2ce59371bba8c914c2efccd74af008b6527b18ecdfa284e2c0ce58d35e40c404
-      linux-gnu-x86_64: 3edab9af39f574ed74e744b838ebee87ea1bb1621b61fe6e9b5c04ff652335cd
-      windows-ucrt64: cc70d67ecb3706dd6ddcb17c91e93227304968d47e63d6b580a3ca4696f8f54a
-      linux-musl-x86_64: feef4e3014ea073af9a77126596178344bf51ee85419f8fb5d6fb81bb075ae94
-      linux-musl-arm64: 5a8d6768f1f8ae0defddd3c2a7b49521ccff589f7b2e7454b8009026d97f9e05
     # The installer legs (spec 16 §7) stage the FOUR PATH tools — tebako,
     # tebako-shim, tfs, tebako-pkg — so the CLI + dispatcher pins join the
     # press set here, per installer-leg platform (the pkg legs' macos-*,
     # the MSI leg's windows-ucrt64). pins.rb fails CLOSED on a missing
     # pin, named.
+    tebako-pkg:
+      macos-arm64: 481d0d41ded2e46782e44a6a628f1e28c49fc1adc2a397257c428dd751633830
+      macos-x86_64: 780e0510f0b020d8c9e0abc9a1d2dbb2e74976dca6734f342b86a0a56d2fb337
+      linux-gnu-x86_64: 59d6948286b22c5827eb782a3b99ef5cd04b2a4be6b582a35099dc03a5ce3368
+      linux-musl-x86_64: 10912e85192bcf12caa5e8ee3523e5d19d08751a091847cf293da2717d998e5e
+      linux-musl-arm64: 302619aa44f50cf2f96dcaf37a7c629f7075720935f25cd5e7531e7a9171cbe8
+      windows-ucrt64: 7bf27c88b96e29ac1639e50e05065af4b9893c520695295f0902863288b90644
+    tebako-bootstrap:
+      macos-arm64: fb430098c6b90053b8e19bc2b7e66306eb633814eccb9783bbdcbc9cbc5769a3
+      macos-x86_64: 8bddad625431874044032d3e99d6d18bb727ab928c828e799f4cfc5f6fa2a600
+      linux-gnu-x86_64: fc5caccb8e07bde93312a44e483786440cb0165418d8447950c79d4569a20be1
+      linux-musl-x86_64: bafd31c43063dcb715001785c915f27a2704050ace96c7554ea905e285f34291
+      linux-musl-arm64: 34c5fbfa0a9d8939a39293877de33fb372d6d0ef9fc6a3bb693f1d6de7afa143
+      windows-ucrt64: 39062bc79d1c88b10d93e5043be46ebfa1e76e649bae17184bdf6e4759fa8630
+    tfs:
+      macos-arm64: 4a179be25f8ae7b00d0e310e0b06c3bc49ae9d42da89bed1d148a3e912bfe58f
+      macos-x86_64: 38e123fa36a1e4a544baf95a8eb27dfe2b1771c71464643619fa72ec3dba52fe
+      linux-gnu-x86_64: e57e36a7313d451e76bf27f5d6f3474153292deb1e936202d7943346576dc811
+      linux-musl-x86_64: 76f29a6b90fe5786f02a1bb89313d4d837ce1ed2bc51ab500db2edb87c67e25b
+      linux-musl-arm64: 83253485a89a8f0dd871329658d807b8a4c68c2c27893db42f79108e8d6630e2
+      windows-ucrt64: b18385e481712298a018a3d1bc38f43efa368e9b5ebc6a80b5d87164f635b588
     tebako:
-      macos-arm64: 6f1883a194b04c3fb787468d0b9c2ac65514831d1700a1f500da61f246c5904d
-      macos-x86_64: 971f10261f716fda8dbf39c453c9c9bbe1748940ae471c3641c0282be873ae50
-      linux-gnu-x86_64: 71d64f3a7fd839b980a30cf66829d23ab2a5ba6f60845e8155bb3fe57a4454bd
-      windows-ucrt64: fec1afd18d7a02d9c7457f6fe2b56482b3fa9aecc9da09803c015e9bcb984df6
-      linux-musl-x86_64: 4fbf9d6f3f2393764ea313c39d6b5c1dc727290ea9f210e785029dba6c4c7168
-      linux-musl-arm64: 15719a21d213d7ebf3a343e7a043349dd1217a5057a7471660e04e359cf5ee59
+      macos-arm64: 4ecc6a3e395f4ee77a0fc2580de7edafcaf975d484b9ede6601ccb9926acb475
+      macos-x86_64: cce2680ad2423ec09c578302830180a4ebe74461ecf184811399fdd88e346e17
+      linux-gnu-x86_64: 1743c3f7f4b8ee3360019a3ad54b2c1fc87bc383ff915186b496e39804417314
+      linux-musl-x86_64: 35ab0514748edd0ff1ca1ff8263cb1105acd07c22c481a4a20b14968953cb0d6
+      linux-musl-arm64: ea05d0be0654b8916974cb5e531f50262195eee25f055a8233d8e5e638eb6f03
+      windows-ucrt64: 7dc32bea99b96ec3949c0c4d508a6a0082b9aec5214786268cf5a119da2c39fd
     tebako-shim:
-      macos-arm64: 89e0ff4dbcfe92dfb48905af47b287ba1b0e1dfd05cf78da96f0468e9b59c4a2
-      macos-x86_64: ddb68d9b1c89a332dd14f7b69f444102cbc30cdce856951e9eea013f31cc7ea8
-      linux-gnu-x86_64: 27c8c2939e94a2b8cde21867f105909fcd50726b078a669bfeeb1113a192a849
-      windows-ucrt64: f2e070935614a89d599a7ff016cf3e2ab9627b86254cb7627def8d69c38fb3ed
-      linux-musl-x86_64: 85d4e30a17b34d926eaccddc3704c1608f41c827a38cb3d2d4576bbdaed24200
-      linux-musl-arm64: 528f98fa0dcf8a776cdc50551029471ded7b51eba7ca71a0352157c2fadbba4d
+      macos-arm64: 196280b0aa22b7705b78d8960d7b37816acddce5a7e30ae04feca80b78885ca5
+      macos-x86_64: 1f510d0dff6af40da720abfc944da6d080faa1f6ba340430064bce3bed524e1d
+      linux-gnu-x86_64: 6bcf6dc8ba35fc1d954bef7f7ca319b5bd055d1b19289eae5b829bd2f7819307
+      linux-musl-x86_64: a63ab1a58afe49b527f89689eec29c46acc8ea97afcef47b3cbbed96b4072a95
+      linux-musl-arm64: 59abbb8f1823538c1897f8c59bffe65217033fe5a7bc33d909df070b79755391
+      windows-ucrt64: 5d15233c8c7e6953fa0e260633201593ea466bd7c1c66fd6ace25473915fbc0e
 
 runtime:
   # The runtime reference every package entry carries:
