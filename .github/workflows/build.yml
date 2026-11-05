@@ -56,7 +56,7 @@ jobs:
       matrix:
         include:
           - triplet: aarch64-macos
-            os: macos-14
+            os: macos-15
             tool: macos-arm64
             legacy: metanorma-darwin-arm64
           - triplet: x86_64-linux-gnu
