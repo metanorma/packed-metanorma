@@ -43,6 +43,7 @@ tebako:
       macos-arm64: c9325a5bff57da6f818c7208e8af961c04d7d44c20f900b4f00a852a6eb7b293
       macos-x86_64: e344c7fb1bf14279741381da4fd27614abc82fc8cf35089c5cc232b642fb8224
       linux-gnu-x86_64: 6e9850e8a578053dbe7ebac877fc03e5cf9c710e040e504ae3008a11f9e5b3e0
+      linux-gnu-arm64: 77f58b6d7bdc8dadf4b9be05c810483901b8592f98b7227c481d0b32f2433294
       linux-musl-x86_64: 35805a95991be21753dd0b573edba53f2e2ecefb2a35b6d23761417cf74f7956
       linux-musl-arm64: d53b5904a5122fe2554c4516ec712736bae111268fb20b4a0a025bf77e24a0ca
       windows-ucrt64: b7655036a55c3a9879f692a35017885d4c1ee6ccce77c3d44d9e244baf1bf2a6
@@ -50,6 +51,7 @@ tebako:
       macos-arm64: 9b8ddc4669742c02b30537f5e9ef0c9c9c05dbe8d7c75cc4326a9b3ad2490669
       macos-x86_64: 769ce7ceb7a5cdb2fc583fc7093ee75300bfdafe9be7f46d9cf309fa1d3cbba1
       linux-gnu-x86_64: 19657f8bbe8642196047d81006f80d652d436eebaa7469cde80265600f9ce9d3
+      linux-gnu-arm64: 70366a3c3794399259dce21762223cd89b10a230e1b9f525fa5410dbc74d55e3
       linux-musl-x86_64: 8a5d3a96c15305e686509389934d37cfc037f9b08957907945f7ed78118a00db
       linux-musl-arm64: 1123882b9d138f611ca1c9ee03bac29ce06cbbb5e632bbc3df5aee3e29f88711
       windows-ucrt64: eb465759412e9a8f173fbf39b70da452215fd970fc606e5a7f168edb7c1dc817
@@ -57,6 +59,7 @@ tebako:
       macos-arm64: acfb6f4208049de02bb2b0336901fd2c97c1adb008b6ed6a1771041fe772d8e6
       macos-x86_64: fff203ac007ab0479d3e7139f3e2d3f6fcfb92c8a9f3b729ba04d488739160c8
       linux-gnu-x86_64: 5064f1c9f67438761d209e8d72d94d982433f79bc829e921eb72a25d5ec4ad19
+      linux-gnu-arm64: 5f79b805bc5298fc31c3d42d3bd1375aca47daa64ba3c26c7412d365fda5b26a
       linux-musl-x86_64: ac8d6495e4c0b2c7db5e40fad056d42b40a3daf0d403f7235a5d1965c0b24c16
       linux-musl-arm64: 8960d2b09df5ec516921249c74c6c059be81e6de8f2a92a7998c77cdc4aeeba5
       windows-ucrt64: 14909565e2148591efa7d782ee9c1fea45c268a7d6845d16ba5458294add51dc
@@ -98,12 +101,16 @@ runtime:
       windows-ucrt64: 509f854d05cb42260bf20de6274269f0a86bbd428a963c55aff24f06ba8e236a
       linux-musl-x86_64: 6b8e4098f8583c8d4b5dae7d577f617d8fc17fffe26ae72613002d0f59e73245
       linux-musl-arm64: 53c1c2219ab8f69fc3868ba24773a44088da9f21a77174a966f6ec58ad871329
+      macos-x86_64: d0b591ece5f8222ec2527c8df66981eec42322f527e671b528a685c32124bad1
+      linux-gnu-arm64: 8ae3b84d1594d9b03271cd4cfbd6ecc85589b56efb8540bef3081f1fef921a07
     image:
       macos-arm64: 1dd845565f4e9b256f88f0091da0ae8686af8d122c972b630b3c02a27c87c418
       linux-gnu-x86_64: f5dcb9d1621e2ac29d18c827d6e4968eb0bc0f2b942814aca92b91ef3a4d35c9
       windows-ucrt64: 62202938d1cd1db7900155db53638f5631f141c06732f1e0506cb35b512fa539
       linux-musl-x86_64: 5b4ef5cd351d797d1900cec1d65fb51c6655f2d231a7ab6fa2d711fd0b25900a
       linux-musl-arm64: 476b0d7a15e7b9c22a02dc3d118dc75251edf569450b7aaa98242142767f7263
+      macos-x86_64: 5c278a9d7585c8c560efe61e5e21eafb77ff81ba90bf024f6b5f7ff589ad061c
+      linux-gnu-arm64: a6c1e44d6b9cd2403606dc2c4ee3ef152848dbd917666c6276c8c09f85ca12cf
     dll: # windows-only facet (install_as: x64-ucrt-ruby400.dll)
       windows-ucrt64: 5e3b2218f97d00ef16f8c1a70a8248aa997a02f227e9937980f790f665da3fc4
 
@@ -166,46 +173,63 @@ payloads:
       aarch64-linux-musl:
         file: metanorma-1.17.0-linux-musl-arm64.tfs
         sha256: d4efca3c6f175e5af3c2108495ab47e4883fdedc350ad028738a6a4a9bab0299
+      x86_64-macos:
+        file: metanorma-1.17.0-macos-x86_64.tfs
+        sha256: 2b737e8d8c9a0673eef6d0370ce7cb839062c810040f624f03f5824c5cde767c
+      aarch64-linux-gnu:
+        file: metanorma-1.17.0-linux-gnu-arm64.tfs
+        sha256: 7dc6f7df96077a06474b9ee556cde9462c66e7c1bbdb38c9a513229e8ec894f2
   - name: openjdk
     # openjdk is a RUNTIME-kind payload: the feedstock release names the
     # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
     # spec 30: it is NEVER co-mounted — the package carries the exe+image
     # pair as lock.spawned[]-claimed slots; the bootstrap stages them into
     # the machine runtime cache at dispatch and exports TEBAKO_SPAWN_LOCK.
-    # v2.8.28 (2026-10-12): the pair rebuilt on the tebako 2.8.28 line and
-    # the first release carrying the temurin musl pair (#60's legs + #62's
-    # sign-tool platform fix + #63's include-arm audit mapping + #64's
-    # registry rows). The asset digests mirror the feedstock's registry +
-    # release sidecars.
-    release: v2.8.28 # tebako-packages/openjdk tag
+    # v2.8.50 (2026-10-19): the current feedstock line and the first
+    # carrying the temurin macos-x86_64 pair (v2.8.28 shipped macos-arm64
+    # only) — the Intel-mac press leg's input. The asset digests mirror
+    # the feedstock's registry + release sidecars (cross-checked: the
+    # registry's .tfs digest equals the release's .tfs.sha256 sidecar for
+    # every triplet).
+    release: v2.8.50 # tamatebako/tebako-runtime-openjdk tag
     lang_version: 21.0.12 # the engine version (lock.spawned[].version)
-    tebako_version: 2.8.28 # the runtime's own tebako line (lock.spawned[].tebako)
+    tebako_version: 2.8.50 # the runtime's own tebako line (lock.spawned[].tebako)
     assets:
       aarch64-macos:
-        file: tebako-runtime-2.8.28-temurin-21.0.12-macos-arm64.tfs
-        sha256: e46d23a16ce243f3ca4563ff6ad9103a363d9f5d00713d67bd7bca548554549b
-        exe_file: tebako-runtime-2.8.28-temurin-21.0.12-macos-arm64
-        exe_sha256: 9484c0a2aa7db6e17a717059710e1427091b1dbf4a3811bffdf9d5e690048a53
+        file: tebako-runtime-2.8.50-temurin-21.0.12-macos-arm64.tfs
+        sha256: 1006c9f44c3da9ce9f5fe8c51903a6c335aa6c1f8641e920cb275f8265217cb0
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-macos-arm64
+        exe_sha256: 7dd80f329b8933acadc0b8a1cac7a1a0eaa92989df67deb6d44961c1cb1caad3
+      x86_64-macos:
+        file: tebako-runtime-2.8.50-temurin-21.0.12-macos-x86_64.tfs
+        sha256: 640142e2312a239e591a30e4b1f1c26958277d591dcedca7c74c5323e300d50f
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-macos-x86_64
+        exe_sha256: b29cbf69298cb698232224f5ba1872ea94c9dbf3c48715b4131d7c3b1f2888b3
       x86_64-linux-gnu:
-        file: tebako-runtime-2.8.28-temurin-21.0.12-linux-gnu-x86_64.tfs
-        sha256: fe4a44634020f3a88c578fc6d873eb21339d784f814cdec1991c977bba908152
-        exe_file: tebako-runtime-2.8.28-temurin-21.0.12-linux-gnu-x86_64
-        exe_sha256: bcc01ed462ce4bbfb383fcc9de86f0da724d3476eb81edc09afdd74c323e0841
+        file: tebako-runtime-2.8.50-temurin-21.0.12-linux-gnu-x86_64.tfs
+        sha256: '08726836049b3d017d7afd95055ef152e60141b63328da97554e39bbc6d0c481'
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-linux-gnu-x86_64
+        exe_sha256: 848391491f776242abf9e4ac6d7334cd9e689a245e19467cf5289ea44beffa53
+      aarch64-linux-gnu:
+        file: tebako-runtime-2.8.50-temurin-21.0.12-linux-gnu-arm64.tfs
+        sha256: e64bf0df5a699c9902b54c2e9d5d89282cfb52c73273d2e1766a88c724938ada
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-linux-gnu-arm64
+        exe_sha256: f393602190d0614582ca2875ea21ebeabc6908aa16b3d1b45fa4cb901a7212cc
       x86_64-windows-ucrt:
-        file: tebako-runtime-2.8.28-temurin-21.0.12-windows-ucrt64.tfs
-        sha256: 718a8d0bc6a2a60005b07940b882d883355f97b6131f8d9c64f787017dae8cb1
-        exe_file: tebako-runtime-2.8.28-temurin-21.0.12-windows-ucrt64.exe
-        exe_sha256: 384cd72ba618c08a148b252e04919b20576555a42f99209d87e9f2e6fc857c56
+        file: tebako-runtime-2.8.50-temurin-21.0.12-windows-ucrt64.tfs
+        sha256: 31d8ee0db5cfde4d9a9772727e4e29a74488cf0b445c4d31233f8f3e105f6d8a
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-windows-ucrt64.exe
+        exe_sha256: 6ae2a74202650b18e5e67d69d5a08b189d4401622a5f2ac309018709bca2d917
       x86_64-linux-musl:
-        file: tebako-runtime-2.8.28-temurin-21.0.12-linux-musl-x86_64.tfs
-        sha256: cb29300659116363aa2e4aa7732d18fad58d72fddc4b9eb0b23cc70e572be516
-        exe_file: tebako-runtime-2.8.28-temurin-21.0.12-linux-musl-x86_64
-        exe_sha256: b4cdbe93b727205d2661bff16aa62e9a56622e36573082cf3a2b7b396ec17ac6
+        file: tebako-runtime-2.8.50-temurin-21.0.12-linux-musl-x86_64.tfs
+        sha256: c7b8e164958c653b011bbd2541e9b7ab63891328ad41cf9af16ae074f41005c5
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-linux-musl-x86_64
+        exe_sha256: 1db0d2d266e637f29cfde9bc4f05a9bcf904dff0586887270230d834a6459fdc
       aarch64-linux-musl:
-        file: tebako-runtime-2.8.28-temurin-21.0.12-linux-musl-arm64.tfs
-        sha256: 0d3ee5aa8020c1291ed307d23bcb556ef28056bd83fd917bbdf33b57592c6e44
-        exe_file: tebako-runtime-2.8.28-temurin-21.0.12-linux-musl-arm64
-        exe_sha256: 0cdfe3076191e2462b776b15de502fe2ca5a3b2914cfc64380ac640ff0e21860
+        file: tebako-runtime-2.8.50-temurin-21.0.12-linux-musl-arm64.tfs
+        sha256: '089eb6fd82b804ff4f047afdbb96f9f338d45eb9ee0bca5ef3dd3cd9ad0147ff'
+        exe_file: tebako-runtime-2.8.50-temurin-21.0.12-linux-musl-arm64
+        exe_sha256: 0666faf59c7e7971f07efe388a62cb0b912e323b4e75c971d0d75df57215ef69
   - name: xml2rfc
     # spec 32's first spawned-PAYLOAD edge: the ietf chain's xml2rfc console
     # script, dispatched as a child process through its own spec-17
@@ -267,3 +291,22 @@ payloads:
         py_exe_sha256: d5ad454a9bb9c8266292f117515039d7e8c7122d78dbd2e77d6bb576c1d011f4
         py_image_file: tebako-runtime-0.2.7-3.14.7-linux-musl-arm64.tfs
         py_image_sha256: 3b3ce19da5fdb43ff5576baa86cd227ad0787f8727048111123b722e94882b8b
+      # The Intel-mac + gnu-arm64 rows (#280): the payload digests
+      # mirror the feedstock's 3.34.1 registry rows; the python pair
+      # mirrors tebako-runtime-python v0.2.7's registry rows (image
+      # digests) and published exes (the exe digests, hashed at pin
+      # time — the v0.2.7 3.14.7 rows ship no .sha256 sidecars).
+      x86_64-macos:
+        file: xml2rfc-3.34.1-macos-x86_64.tfs
+        sha256: 1ab3af8fc5bced6946d8a995d8a08394c27ac01f0754b4bc0a44ba7014e5598f
+        py_exe_file: tebako-runtime-0.2.7-3.14.7-macos-x86_64
+        py_exe_sha256: 95f7055d68ec08bb5a8876b57297c82118d4e2cbdece716445105d5b54761061
+        py_image_file: tebako-runtime-0.2.7-3.14.7-macos-x86_64.tfs
+        py_image_sha256: 61b7d2a8dfb2c177176bd69e4d0dfd7b614b06a8c15db14052e8ebb3281a67de
+      aarch64-linux-gnu:
+        file: xml2rfc-3.34.1-linux-gnu-arm64.tfs
+        sha256: b7024f04aa608072c122895fe33712d96642a1a27265c9d71e52531a0f9e44eb
+        py_exe_file: tebako-runtime-0.2.7-3.14.7-linux-gnu-arm64
+        py_exe_sha256: 637001f8932b7469619ab29726c81bc66c284369d6c4207bc71bd36f6e959781
+        py_image_file: tebako-runtime-0.2.7-3.14.7-linux-gnu-arm64.tfs
+        py_image_sha256: 360f41f51f6275280f52ba30b4f3fd5459ba84bff9530b3a5f6a8b040b5926a8

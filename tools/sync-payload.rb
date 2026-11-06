@@ -21,7 +21,10 @@ def die(msg)
   exit 64
 end
 
-TRIPLETS = %w[aarch64-macos x86_64-linux-gnu x86_64-windows-ucrt].freeze
+# Every triplet the feedstock publishes for the 1.17.0 line — a row not
+# synced here goes silently stale on the next payload bump (same failure
+# class as the pre-#280 coverage gap).
+TRIPLETS = %w[aarch64-macos x86_64-macos x86_64-linux-gnu aarch64-linux-gnu x86_64-windows-ucrt x86_64-linux-musl aarch64-linux-musl].freeze
 
 version = ARGV[0] or die "usage: sync-payload.rb <version> <registry.yaml>"
 registry_path = ARGV[1] or die "usage: sync-payload.rb <version> <registry.yaml>"
