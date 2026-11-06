@@ -852,8 +852,12 @@ jobs:
           files: |
             rel/metanorma-darwin-arm64.tgz
             rel/metanorma-darwin-arm64.tgz.sha256.txt
+            rel/metanorma-darwin-x86_64.tgz
+            rel/metanorma-darwin-x86_64.tgz.sha256.txt
             rel/metanorma-linux-x86_64.tgz
             rel/metanorma-linux-x86_64.tgz.sha256.txt
+            rel/metanorma-linux-arm64.tgz
+            rel/metanorma-linux-arm64.tgz.sha256.txt
             rel/metanorma-linux-musl-x86_64.tgz
             rel/metanorma-linux-musl-x86_64.tgz.sha256.txt
             rel/metanorma-linux-musl-arm64.tgz
