@@ -63,6 +63,14 @@ jobs:
             os: ubuntu-24.04
             tool: linux-gnu-x86_64
             legacy: metanorma-linux-x86_64
+          - triplet: x86_64-macos
+            os: macos-15-intel
+            tool: macos-x86_64
+            legacy: metanorma-darwin-x86_64
+          - triplet: aarch64-linux-gnu
+            os: ubuntu-24.04-arm
+            tool: linux-gnu-arm64
+            legacy: metanorma-linux-arm64
           - triplet: x86_64-windows-ucrt
             os: windows-latest
             tool: windows-ucrt64
@@ -750,6 +758,8 @@ jobs:
           mkdir -p rel
           cp stage/dist-aarch64-macos/metanorma-darwin-arm64.tgz* rel/
           cp stage/dist-x86_64-linux-gnu/metanorma-linux-x86_64.tgz* rel/
+          cp stage/dist-x86_64-macos/metanorma-darwin-x86_64.tgz* rel/
+          cp stage/dist-aarch64-linux-gnu/metanorma-linux-arm64.tgz* rel/
           cp stage/dist-x86_64-windows-ucrt/metanorma-windows-x86_64.exe* rel/
           cp stage/dist-x86_64-linux-musl/metanorma-linux-musl-x86_64.tgz* rel/
           cp stage/dist-aarch64-linux-musl/metanorma-linux-musl-arm64.tgz* rel/
@@ -792,7 +802,9 @@ jobs:
           | Platform | Asset |
           |---|---|
           | macOS (Apple Silicon) | metanorma-darwin-arm64.tgz |
+          | macOS (Intel) | metanorma-darwin-x86_64.tgz |
           | Linux (x86_64) | metanorma-linux-x86_64.tgz |
+          | Linux (arm64) | metanorma-linux-arm64.tgz |
           | Linux (x86_64, Alpine/musl) | metanorma-linux-musl-x86_64.tgz |
           | Linux (arm64, Alpine/musl) | metanorma-linux-musl-arm64.tgz |
           | Windows (x86_64) | metanorma-windows-x86_64.exe (also .zip) |
@@ -891,14 +903,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One macOS triplet today: aarch64. The Intel leg parks until the
-        # feedstock ships an x86_64-macos payload (the seed installs
-        # metanorma from the feedstock registry, which today carries
-        # aarch64-macos, x86_64-linux-gnu, x86_64-windows-ucrt); it
-        # re-joins with the payload:
-        #   - { triplet: x86_64-macos,  host_id: macos-x86_64, runner: macos-15-intel }
+        # Both macOS triplets: the feedstock's 1.17.0 rows carry the
+        # x86_64-macos payload, so the Intel leg runs (#280). pins.rb
+        # already maps the triplet to the macos-x86_64 toolchain pins.
         include:
           - { triplet: aarch64-macos, host_id: macos-arm64,  runner: macos-latest }
+          - { triplet: x86_64-macos,  host_id: macos-x86_64, runner: macos-15-intel }
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
