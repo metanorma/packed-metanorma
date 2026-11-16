@@ -80,39 +80,39 @@ tebako:
 
 runtime:
   # The runtime reference every package entry carries:
-  #   ruby@4.0.7;tebako=0.17.1;image
+  #   ruby@4.0.9;tebako=0.17.14;image
   # ruby moves to the 4.0 line ON PURPOSE: metanorma 1.17.0's DEFAULT flavor
   # declares runtime_requirement ruby "~> 4.0.0" — the 3.3 line now serves
   # only the explicit 1.17.0-ruby3.3 fallback flavor (owner decision — the
   # 2026-08-26 "hold 3.3 for the v1 benchmark comparison" note is
   # superseded; 1.17 runs ruby 4.0 as default).
-  # 0.17.1 is the current factory line (the shard era: per-(line ×
+  # 0.17.14 is the current factory line (the shard era: per-(line ×
   # platform-group) release tags with per-row release refs — the registry's
   # rows carry the shard tags; the resolver rides them). The musl pairs
   # exist only on this line (the image-era shape) — the Alpine lane's
   # runtime side.
-  release: v0.17.1 # tamatebako/tebako-runtime-ruby line (sharded tags below)
-  tebako: 0.17.1 # the runtime line (tebako=<abi> in the ref)
-  ruby: 4.0.7 # the interpreter version
+  release: v0.17.14 # tamatebako/tebako-runtime-ruby line (sharded tags below)
+  tebako: 0.17.14 # the runtime line (tebako=<abi> in the ref)
+  ruby: 4.0.9 # the interpreter version
   sha256:
     exe:
-      macos-arm64: 0d947c779f92a6a00d056af4d1f13661e91d0baf0dee4b12a84ea004abb0de27
-      linux-gnu-x86_64: d3431a3b38fcdd379ab013de31cb1cd501f8afb0b025152cd77cbb190b11d5aa
-      windows-ucrt64: 509f854d05cb42260bf20de6274269f0a86bbd428a963c55aff24f06ba8e236a
-      linux-musl-x86_64: 6b8e4098f8583c8d4b5dae7d577f617d8fc17fffe26ae72613002d0f59e73245
-      linux-musl-arm64: 53c1c2219ab8f69fc3868ba24773a44088da9f21a77174a966f6ec58ad871329
-      macos-x86_64: d0b591ece5f8222ec2527c8df66981eec42322f527e671b528a685c32124bad1
-      linux-gnu-arm64: 8ae3b84d1594d9b03271cd4cfbd6ecc85589b56efb8540bef3081f1fef921a07
+      macos-arm64: c86927da26cad842e1b04b43784e17d791ffdf70221bf5b6c315df30c57f4279
+      linux-gnu-x86_64: 753e242b0f52a53345da23f2f176cd8d7817db7128e2c17182da1ddd3a753841
+      windows-ucrt64: 794b07f35bd11d82142e4e740ca8e49484892f0c5db9026f81272661d6fb95eb
+      linux-musl-x86_64: a1c8f61284fd56da76b2d12818b7d729e39fc9e9ab66a9689412b808ea131ff9
+      linux-musl-arm64: fbcca7c300c0a1344c271e5d1c9960405a5a50b24ac616277c84418d8431ad18
+      macos-x86_64: 4f4f74668ea1bab64c8518ec2811d67e6f269637eb5c09a1788dcf9ea2505f13
+      linux-gnu-arm64: ac0c26d1d169f5f7a09c6e5ff2290b94297aaebfe05cfd7813c165c35e36e00a
     image:
-      macos-arm64: 1dd845565f4e9b256f88f0091da0ae8686af8d122c972b630b3c02a27c87c418
-      linux-gnu-x86_64: f5dcb9d1621e2ac29d18c827d6e4968eb0bc0f2b942814aca92b91ef3a4d35c9
-      windows-ucrt64: 62202938d1cd1db7900155db53638f5631f141c06732f1e0506cb35b512fa539
-      linux-musl-x86_64: 5b4ef5cd351d797d1900cec1d65fb51c6655f2d231a7ab6fa2d711fd0b25900a
-      linux-musl-arm64: 476b0d7a15e7b9c22a02dc3d118dc75251edf569450b7aaa98242142767f7263
-      macos-x86_64: 5c278a9d7585c8c560efe61e5e21eafb77ff81ba90bf024f6b5f7ff589ad061c
-      linux-gnu-arm64: a6c1e44d6b9cd2403606dc2c4ee3ef152848dbd917666c6276c8c09f85ca12cf
+      macos-arm64: 34ffa6b1991adaa30087c0ac52258d82125c8ad43a71eeef2de98206515999fe
+      linux-gnu-x86_64: 823b0045d13dc9972775072fc275740d60386aabb71d563bcc2528eb1fdf981c
+      windows-ucrt64: fa923773761361fab3775aca731417e2a30e65c30453816674f2441d9ae1386f
+      linux-musl-x86_64: 55fbe8114c1504df69915b6c4a820d7434a0e163264748949ce3777c8aea4f7a
+      linux-musl-arm64: 746bc8ee494f45c1e099014621ddac7b77af99a624ea1932a184f8348c98c6f7
+      macos-x86_64: a98f07b6fd69ea241214714b255125c33f83afb4a0c51bfa97d3fb40b8a22087
+      linux-gnu-arm64: 4196d2dcbe03de22feb4496d46a1739dd58aa8c45dc38cb74e72aa201a9916fe
     dll: # windows-only facet (install_as: x64-ucrt-ruby400.dll)
-      windows-ucrt64: 5e3b2218f97d00ef16f8c1a70a8248aa997a02f227e9937980f790f665da3fc4
+      windows-ucrt64: 461b50880fcd340cacfc2d3dc8be12d479820b8caa60f52b04c67b55fa20dfbd
 
 package:
   name: metanorma
