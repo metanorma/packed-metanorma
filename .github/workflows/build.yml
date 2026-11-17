@@ -323,6 +323,21 @@ jobs:
           chmod +x "dist/$LEGACY"
           ls -l dist
 
+      - name: Re-sign the pressed binary (macOS)
+        if: runner.os == 'macOS'
+        # The stitch drops the bootstrap's ad-hoc signature; an unsigned
+        # arm64 Mach-O is Killed: 9 on stock macOS (GitHub's macos runners
+        # tolerate it, so the smoke legs below would not catch the loss).
+        # The re-sign lands AFTER the trailer is written — codesign
+        # appends its superblob past the trailer, the exact shape tpkg's
+        # trailer_end Mach-O arm reads back. Publisher-grade signing +
+        # notarization rides the installer track; this ad-hoc floor is
+        # what makes the shipped bytes boot on a real Mac at all.
+        run: |
+          set -euo pipefail
+          codesign --sign - --force "dist/$LEGACY"
+          codesign --verify --verbose=2 "dist/$LEGACY"
+
       - name: Assemble package (Windows)
         if: runner.os == 'Windows'
         shell: msys2 {0}
@@ -673,6 +688,23 @@ jobs:
             shasum -a 256 "$LEGACY.tgz" | awk '{print $1}' > "$LEGACY.tgz.sha256.txt"
           fi
           ls -l
+
+      - name: Post-package smoke (macOS) — test the shipped bytes
+        if: runner.os == 'macOS'
+        # Everything above runs dist/$LEGACY from the workspace. This runs
+        # the exact bytes the release ships — untarred from the tarball —
+        # so a packaging-stage regression (signature loss, truncation)
+        # fails the build instead of reaching users.
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pkgcheck"
+          tar -xzf "dist/final/$LEGACY.tgz" -C "$RUNNER_TEMP/pkgcheck"
+          codesign --verify "$RUNNER_TEMP/pkgcheck/$LEGACY"
+          "$RUNNER_TEMP/pkgcheck/$LEGACY" --version 2>&1 | tee "$RUNNER_TEMP/pkgcheck.log"
+          grep -q "Metanorma::Cli $PKG_VERSION" "$RUNNER_TEMP/pkgcheck.log" || {
+            echo "::error::post-package smoke output does not contain 'Metanorma::Cli $PKG_VERSION'"
+            exit 1
+          }
 
       - name: Package artifacts (Windows)
         if: runner.os == 'Windows'
