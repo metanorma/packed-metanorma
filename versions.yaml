@@ -147,7 +147,7 @@ installers:
   # tebako#688 merged — the pkg rehearsal poll waits for the detached
   # seed's completion effects (the 1.17.0 leg exposed the race: the
   # rehearsal dispatch hit the root-held ruby install lock, EACCES).
-  installer_ref: fe672875d41fe2972b89b84b5dd79b6933ad2bcc
+  installer_ref: fcd19c1f9a9864713a9cc4cf3dc229d0792a036b
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the MSI leg consumes it.
