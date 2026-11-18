@@ -146,10 +146,11 @@ installers:
   # never from this repo's).
   registry: tfs:github:tebako-packages/metanorma
   # The installer machinery pin: a tamatebako/tebako sha (the
-  # spec 16 §7 web-bootstrapper hook). 54f6a200 is main HEAD carrying
-  # tebako#1086 — the productsign retry on Apple's timestamp-service
-  # -67882 flake (the v1.18.6-1 pkg leg needed five attempts against it).
-  installer_ref: 54f6a2003e75ca6559e0998bf27fd820563559a0
+  # spec 16 §7 web-bootstrapper hook). 2f8fd0fd is main HEAD carrying
+  # tebako#1091 — the rehearsal's authenticated seed pass (pmn#290: the
+  # detached seed's unauthenticated api.github.com fetches 403 on the
+  # shared CI egress) — riding tebako#1086's productsign retry line.
+  installer_ref: 2f8fd0fd1dbbe380d210cd9dacac0725ded01698
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the MSI leg consumes it.
