@@ -1016,6 +1016,12 @@ jobs:
           APPLE_ASC_KEY_P8: ${{ secrets.APPLE_ASC_KEY_P8 }}
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          # pmn#290: the rehearsal's authenticated seed pass (tebako-ci
+          # macos-pkg-build.sh) reads this to de-flake the detached
+          # seed's unauthenticated api.github.com fetches on shared
+          # runner egress IPs. Never written into the pkg or the seed —
+          # process env only.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash ci/macos-pkg-build.sh
 
       - name: Upload the pkg to the tag release (armed tags only)
