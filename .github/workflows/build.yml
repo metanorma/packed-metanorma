@@ -614,6 +614,17 @@ jobs:
           for f in 'Inter' 'Source Han Sans' 'Cambria' 'Times New Roman'; do
             "$RUNNER_TEMP/fontist" install "$f" || { echo "::error::fontist install '$f' failed"; exit 1; }
           done
+          # fontist#554's deeper half: the four installs land every font on
+          # disk, but each add_font's index rebuild ADOPTS any on-disk index
+          # younger than 60 s instead of re-globbing — a burst can leave the
+          # index partial, and a compile read inside the window then raises
+          # MissingFontError for a font that installed fine (seen: Inter on
+          # this leg). Delete the index: the compile's own rebuild finds
+          # nothing to adopt and re-globs the (complete, correctly installed)
+          # font tree. Deterministic; the alternative (sleep 65) costs a
+          # minute per leg for the same guarantee.
+          rm -f ~/.fontist/system_index.default_family.yml \
+                ~/.fontist/system_index.preferred_family.yml
           cd fixtures/iso-test
           set +e
           "$GITHUB_WORKSPACE/tools/with-timeout" 1500 \
@@ -669,6 +680,12 @@ jobs:
           for f in 'Inter' 'Source Han Sans' 'Cambria' 'Times New Roman'; do
             "$RUNNER_TEMP/fontist.exe" install "$f" || { echo "::error::fontist install '$f' failed"; exit 1; }
           done
+          # fontist#554's deeper half (the POSIX leg's note): the installs
+          # land every font on disk, but the 60 s adoption window can leave
+          # the index partial; delete it so the compile re-globs the
+          # complete tree instead of adopting a burst-partial one.
+          rm -f ~/.fontist/system_index.default_family.yml \
+                ~/.fontist/system_index.preferred_family.yml
           cd fixtures/iso-test
           set +e
           "$GITHUB_WORKSPACE/tools/with-timeout" 1500 \
