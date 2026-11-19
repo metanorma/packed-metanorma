@@ -28,7 +28,7 @@ TRIPLETS = %w[aarch64-macos x86_64-macos x86_64-linux-gnu aarch64-linux-gnu x86_
 
 version = ARGV[0] or die "usage: sync-payload.rb <version> <registry.yaml>"
 registry_path = ARGV[1] or die "usage: sync-payload.rb <version> <registry.yaml>"
-die "malformed version '#{version}'" unless version.match?(/\A\d+\.\d+\.\d+\z/)
+die "malformed version '#{version}'" unless version.match?(/\A\d+\.\d+\.\d+(?:\.[0-9A-Za-z-]+)*\z/)
 
 root = File.expand_path("..", __dir__)
 versions_path = File.join(root, "versions.yaml")
