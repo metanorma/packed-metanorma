@@ -819,6 +819,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Read release pins
         run: ruby tools/pins.rb --release >> "$GITHUB_ENV"
+      - name: Classify the release channel
+        run: |
+          set -euo pipefail
+          # semver prerelease shape (the mirror contract): a version string
+          # carrying any non-digit segment after the numeric prefix —
+          # 1.18.7.pre.20261118 → prerelease; 1.18.6 and its rebuild
+          # serials (1.18.6-3) → stable. Derived from the tag, never a
+          # decision; prerelease releases stay out of /releases/latest
+          # and livecheck-style consumers automatically.
+          v="${GITHUB_REF_NAME#v}"
+          base="${v%-*}"
+          if [[ "$base" =~ [^0-9.] ]]; then
+            echo "PRERELEASE=true" >> "$GITHUB_ENV"
+            echo "::notice::$v is a prerelease — the release object is flagged --prerelease"
+          else
+            echo "PRERELEASE=false" >> "$GITHUB_ENV"
+          fi
       - uses: actions/download-artifact@v4
         with:
           pattern: dist-*
@@ -919,6 +936,7 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ env.PRERELEASE }}
           body_path: RELEASE-NOTES.md
           files: |
             rel/metanorma-darwin-arm64.tgz
