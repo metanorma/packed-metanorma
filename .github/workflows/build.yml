@@ -796,20 +796,24 @@ jobs:
           curl -fSL https://raw.githubusercontent.com/tebako-packages/metanorma/main/tpkg-registry.yaml \
             -o "$RUNNER_TEMP/metanorma-registry.yaml"
           ruby tools/sync-payload.rb "${{ steps.prep.outputs.version }}" "$RUNNER_TEMP/metanorma-registry.yaml"
-      - name: Commit + tag
-        run: |
-          set -euo pipefail
-          git config user.name tebako-ci
-          git config user.email tebako@ribose.com
-          git add versions.yaml
-          if git diff --cached --quiet; then
-            echo "::notice::versions.yaml already at ${{ steps.prep.outputs.version }} — nothing to commit"
-          else
-            git commit -m "chore: metanorma payload ${{ steps.prep.outputs.version }}"
-            git push origin HEAD:main
-          fi
-          git tag -f "v${{ steps.prep.outputs.version }}"
-          git push -f origin "v${{ steps.prep.outputs.version }}"
+      # Land the roll by PR, never by push: main is branch-protected and
+      # the direct push is refused with GH006 (observed on the
+      # 1.18.7.pre.20261118 roll — run 44522545885: the sync worked, the
+      # push died). The PR's merge then mints the tag via tag-on-merge —
+      # the feedstock's proven pattern. On a no-change roll the step is a
+      # no-op (create-pull-request exits clean on a clean tree).
+      - name: Open the roll pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+          branch: prepare/metanorma-${{ steps.prep.outputs.version }}
+          add-paths: versions.yaml
+          title: "roll: metanorma payload ${{ steps.prep.outputs.version }} (prepare)"
+          commit-message: "chore: metanorma payload ${{ steps.prep.outputs.version }}"
+          body: |
+            Automated payload roll by the prepare job: metanorma **${{ steps.prep.outputs.version }}** synced from the feedstock registry (package.version + release tag + per-triplet file/sha256 — nothing else touched).
+
+            Merging mints `v${{ steps.prep.outputs.version }}` via tag-on-merge; its build's release is flagged prerelease automatically when the version shape says so.
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

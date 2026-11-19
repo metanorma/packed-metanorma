@@ -1,0 +1,63 @@
+# tag-on-merge: when versions.yaml's package.version moves on main (a
+# roll PR merge — the prepare's or a hand roll), mint the release tag on
+# the merge commit. The tag push fires build.yml's press + release, so a
+# roll lands published with no hand step: prepare opens the PR → merge →
+# tag → build → release (flagged prerelease when the version shape says
+# so — build.yml's classify step).
+#
+# Tag shape: v<version> for the first mint; v<version>-<next serial> for
+# rebuilds of a version already tagged (the prepare's re-roll of a rolled
+# pin, or a deliberate rebuild). Idempotent: a push that does not move
+# package.version is a loud no-op; a re-run recomputes.
+name: tag-on-merge
+
+on:
+  push:
+    branches: [main]
+    paths: [versions.yaml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag-on-merge
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: mint the release tag for the new pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          # A GITHUB_TOKEN-pushed tag NEVER triggers build.yml (GitHub's
+          # anti-recursion rule — pushes with the default token are
+          # invisible to workflow triggers). The org PAT, so the tag push
+          # fires the build (the feedstock's registry bot PR pattern).
+          token: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+
+      - name: mint the tag
+        run: |
+          set -euo pipefail
+          # package.version from the top-level package: block only (the
+          # file carries other version: keys).
+          read_version() {
+            awk '/^package:$/ {inpkg=1; next} inpkg && /^  version: / {print $2; exit} /^\S/ {inpkg=0}' "$1"
+          }
+          new_v="$(read_version versions.yaml)"
+          [ -n "$new_v" ] || { echo "::error::package.version not found"; exit 1; }
+          old_v="$(git show 'HEAD~1:versions.yaml' > /tmp/vy-old && read_version /tmp/vy-old)"
+          [ "$new_v" != "$old_v" ] || { echo "package.version unchanged ($new_v) — nothing to tag"; exit 0; }
+          git fetch --tags -q
+          if git rev-parse -q --verify "refs/tags/v$new_v" >/dev/null 2>&1; then
+            serial="$(git tag -l "v$new_v-*" | sed "s/^v$new_v-//" | sort -n | tail -1)"
+            tag="v$new_v-$(( ${serial:-0} + 1 ))"
+          else
+            tag="v$new_v"
+          fi
+          git config user.name tebako-ci
+          git config user.email tebako@ribose.com
+          git tag "$tag"
+          git push origin "$tag"
+          echo "tagged $tag on $(git rev-parse HEAD) — build.yml publishes from the tag"
