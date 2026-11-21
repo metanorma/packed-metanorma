@@ -102,7 +102,6 @@ entries:
   - {name: cabriolet, slot: 0, entrypoint: /bin/cabriolet, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: console, slot: 0, entrypoint: /bin/console, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: convert2oscalyaml.rb, slot: 0, entrypoint: /bin/convert2oscalyaml.rb, runtime_ref: "@@RUNTIME_REF@@"}
-  - {name: dot2ruby, slot: 0, entrypoint: /bin/dot2ruby, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: ea, slot: 0, entrypoint: /bin/ea, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: ebnf, slot: 0, entrypoint: /bin/ebnf, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: emf, slot: 0, entrypoint: /bin/emf, runtime_ref: "@@RUNTIME_REF@@"}
@@ -110,8 +109,6 @@ entries:
   - {name: excavate, slot: 0, entrypoint: /bin/excavate, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: fractor, slot: 0, entrypoint: /bin/fractor, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: fuzzy_match, slot: 0, entrypoint: /bin/fuzzy_match, runtime_ref: "@@RUNTIME_REF@@"}
-  - {name: gem2gv, slot: 0, entrypoint: /bin/gem2gv, runtime_ref: "@@RUNTIME_REF@@"}
-  - {name: git2gv, slot: 0, entrypoint: /bin/git2gv, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: japanese_calendar, slot: 0, entrypoint: /bin/japanese_calendar, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: jsonld, slot: 0, entrypoint: /bin/jsonld, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: ldiff, slot: 0, entrypoint: /bin/ldiff, runtime_ref: "@@RUNTIME_REF@@"}
@@ -122,7 +119,6 @@ entries:
   - {name: reverse_markdown, slot: 0, entrypoint: /bin/reverse_markdown, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: rng, slot: 0, entrypoint: /bin/rng, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: rougify, slot: 0, entrypoint: /bin/rougify, runtime_ref: "@@RUNTIME_REF@@"}
-  - {name: ruby2gv, slot: 0, entrypoint: /bin/ruby2gv, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: setup, slot: 0, entrypoint: /bin/setup, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: socksify_ruby, slot: 0, entrypoint: /bin/socksify_ruby, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: sparql, slot: 0, entrypoint: /bin/sparql, runtime_ref: "@@RUNTIME_REF@@"}
@@ -135,7 +131,6 @@ entries:
   - {name: ukiryu, slot: 0, entrypoint: /bin/ukiryu, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: unibuf, slot: 0, entrypoint: /bin/unibuf, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: w3c_api, slot: 0, entrypoint: /bin/w3c_api, runtime_ref: "@@RUNTIME_REF@@"}
-  - {name: xml2gv, slot: 0, entrypoint: /bin/xml2gv, runtime_ref: "@@RUNTIME_REF@@"}
   - {name: xsdvi, slot: 0, entrypoint: /bin/xsdvi, runtime_ref: "@@RUNTIME_REF@@"}
 lock:
   # spec 23 §4/§13 — the press resolution record. Runtime: LEAN (the
