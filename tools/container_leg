@@ -8,11 +8,13 @@
 # (checkout, pins.rb, the artifact upload, the tag-run release).
 #
 # This script is the in-container mirror of the workflow's POSIX arms
-# (fetch + verify, render, assemble, gates, smokes, compiles, dist
-# assembly) — same pins, same sha256 verification, same monolith
-# cross-check — ending with the chown handback (root in the container
-# writes root-owned files onto the bind mount; the host's upload/release
-# steps must read them).
+# (fetch + verify, render, assemble, gates, smokes, compiles, the covenant
+# MEASURE half, dist assembly) — same pins, same sha256 verification, same
+# monolith cross-check — ending with the chown handback (root in the
+# container writes root-owned files onto the bind mount; the host's
+# upload/release steps must read them). The covenant's EVALUATE half runs
+# on the host (the product engine is a glibc build); dist/covenant-metrics.json
+# is the hand-off.
 #
 # Inputs (env, forwarded by the workflow's `docker run --env-file` of the
 # pins.rb --env output; the pins themselves flow from versions.yaml via
@@ -22,7 +24,7 @@
 #   RUNTIME_REF / RUNTIME_RUBY / RUNTIME_TEBAKO / RUNTIME_ROOT / LAUNCHER_ABI
 #   PKG_VERSION / LEGACY / EXE_SUFFIX
 #   MN_* / JDK_* / X2RFC_* / PY_*                            the payload pins
-#   GITHUB_WORKSPACE (the mount target), GITHUB_REF_NAME
+#   GITHUB_WORKSPACE (the mount target), GITHUB_REF_NAME, TRIPLET
 set -euo pipefail
 
 step() { printf '\n== %s\n' "$*"; }
@@ -195,6 +197,16 @@ fi
 [ "$rc" -eq 0 ] || { echo "::error::compile exited $rc"; exit "$rc"; }
 test -s document.pdf || { echo "::error::compile produced no document.pdf"; exit 1; }
 cd - >/dev/null
+
+step "covenant harness — measure the per-payload budgets (issue #303)"
+# The musl package executes only under musl libc, so the MEASURE half of
+# the covenant runs here (the host's "Covenant gate — evaluate" step then
+# judges the metrics with the product engine). Writes onto the bind mount;
+# the chown handback below covers it. Same harness, same metrics shape as
+# the POSIX/Windows host legs — the grammar is never forked.
+ruby tools/covenant-run --package "dist/$LEGACY" --triplet "$TRIPLET" \
+  --metrics "$GITHUB_WORKSPACE/dist/covenant-metrics.json" --release "${GITHUB_REF_NAME:-container}" \
+  --compile-samples 2 --no-warmup --skip-font-stage
 
 step "package artifacts"
 mkdir -p dist/final

@@ -114,11 +114,44 @@ request is reviewed and merged there.
 * `tools/pins.rb` — reads `versions.yaml`, emits the env a build leg
   needs (`ruby tools/pins.rb <triplet> <tool-platform> --env`)
 * `tools/render-manifest` — renders the manifest template
+* `tools/covenant-run` — the per-payload covenant harness: measures the
+  pressed package (cold/warm dispatch latency, warm ISO compiles to
+  xml/html/pdf, byte size) and emits the metrics `ci/covenant.yaml`
+  budgets (see below)
 * `tools/sync-payload.rb` — flows a new metanorma payload version from
   the feedstock registry into `versions.yaml` (used by the dispatch flow)
-* `fixtures/r060-1/` — the OIML document the PDF-compile diagnostic
-  builds
+* `fixtures/iso-test/` — the ISO document the PDF acceptance and the
+  covenant's compile cells build
+* `fixtures/r060-1/` — the OIML document the xml/html acceptance builds
+* `ci/covenant.yaml` — the per-payload budgets
 * `.github/workflows/build.yml` — the whole pipeline
+
+=== The per-payload covenant (issue #303)
+
+The product covenant gates tebako releases; this repo gates the payload
+on the numbers a payload user feels. Every build leg (PRs and tags
+alike — no continue-on-error) runs `tools/covenant-run` against the
+just-pressed package and judges the metrics with the *same*
+`tebako-bench covenant` machinery the product uses (built from
+tamatebako/tebako at the pinned toolchain release; the covenant grammar
+is reused, never forked):
+
+* `dispatch.version.warm.median` / `dispatch.version.cold.median` —
+  `metanorma --version`, warm store vs a fresh `TEBAKO_HOME` (the
+  first-run-after-install latency: runtime resolve + download + verify +
+  boot).
+* `compile.iso_xml/html/pdf.warm.median` — `metanorma compile` of the
+  ISO fixture to each output, warm caches.
+* `package.size.<triplet>` — the pressed package's byte size, a bloat
+  ceiling per triplet.
+
+Bounds are calibrated from real measurements against the published
+package with ~1.5x headroom (cited per cell in `ci/covenant.yaml`), so a
+slow shared runner never false-trips — the gate trips on regressions.
+The trip proof rides the build workflow's `workflow_dispatch` `inject`
+input (`TEBAKO_BENCH_INJECT=<cell-or-axis>:<factor>`): a dispatch with
+e.g. `dispatch.version:10` must red the legs naming the injected cells —
+a gate that cannot be tripped on purpose cannot be trusted.
 
 === Bumping the metanorma payload
 
@@ -134,35 +167,6 @@ xml2rfc slices or the tebako/runtime pins is a manual one-line edit of
 
 == Known limitations
 
-* *PDF output is blocked by an upstream tebako gap.* tebako v0.2.4
-  hands mounted payload regions to spawned child processes via
-  `TEBAKO_TFS_MOUNTS` as bare `image:mount` pairs; the child then tries
-  to mount the whole package *file* at the payload's mount point and
-  fails:
-+
-----
-libtfs-preload: TEBAKO_TFS_MOUNTS: cannot mount <package> at /opt/openjdk: Invalid argument
-----
-+
-Since `metanorma compile` shells out to the mn2pdf JVM (which lives in
-  the OpenJDK slice) regardless of output format, any compile hits this.
-  The workflow's PDF leg is therefore a non-blocking diagnostic that
-  fails the build on any *other* error signature. The fix is a tebako
-  mounts-grammar extension (the C ABI already has
-  `tebako_fs_mount_from_file_at`); once a tebako release carrying it is
-  pinned in `versions.yaml`, flip the leg's `continue-on-error` off.
-
-* *Windows runtime resolution is blocked by an upstream naming
-  mismatch.* tebako-runtime-ruby v0.16.9 publishes the windows
-  interpreter as `tebako-runtime-0.16.9-3.3.12-windows-ucrt64` (no
-  `.exe`) and its `manifest.json` agrees, but tebako-bootstrap v0.2.4
-  looks the asset up as `…-ucrt64.exe` and its contract gate refuses:
-  `runtime "ruby@3.3.12;tebako=0.16.9;image" is pre-era … (no entry for
-  tebako-runtime-0.16.9-3.3.12-windows-ucrt64.exe)` (exit 75). POSIX
-  platforms are unaffected. The workflow's windows smoke step is a
-  non-blocking diagnostic gated on exactly this signature until a
-  runtime/toolchain pair with matching windows naming is pinned.
-
 * *Windows executable ships without a file icon.* Resource embedding is
   pending in the tebako toolchain (the v1 `resources.win/` mechanism
   does not apply to the Rust bootstrap).
@@ -170,10 +174,26 @@ Since `metanorma compile` shells out to the mn2pdf JVM (which lives in
 * *Windows CA bundle.* The runtime image does not expose its CA bundle
   to the host JVM (tebako#437); the workflow extracts `ssl/cert.pem`
   from the cached runtime image and points `SSL_CERT_FILE` at it during
-  the compile diagnostic.
+  the compile legs.
 
 * *First run needs the network.* Lean packages resolve the runtime pair
-  on first run (one-time, cached afterwards).
+  on first run (one-time, cached afterwards; the covenant's
+  `dispatch.version.cold` cell budgets exactly this latency).
+
+.History (fixed upstream, kept for archaeology)
+[%collapsible]
+====
+The two former upstream blockers are FIXED by the pins in
+`versions.yaml`: the region-mounts gap (`TEBAKO_TFS_MOUNTS` bare
+`image:mount` pairs → EINVAL on spawned children) was fixed in tebako
+v0.2.7+ (the tebako#458 composition work; slots mount as offset/length
+regions), and the windows runtime asset-naming mismatch (exit 75
+pre-era) plus the LoadError-126-on-ox.so gap were fixed in
+tebako-runtime-ruby v0.16.10+ (naming + the `library_aliases`
+support-DLL payload, tebako-runtime-ruby#133). The smoke and compile
+legs are ENFORCED — no continue-on-error, no known-signature
+accommodations; any failure is a real regression.
+====
 
 == License
 

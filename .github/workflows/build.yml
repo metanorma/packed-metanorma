@@ -2,12 +2,23 @@ name: build
 
 # Tebako v2 assembly for packed-metanorma. One pipeline: fetch (sha256-pinned
 # tebako toolchain + payload slices) → assemble (tebako-pkg bundle) →
-# validate (structural gates + smoke + PDF compile) → publish (release +
-# downstream dispatches) → installer containers (spec 16 §7: the macOS pkg
-# and windows MSI legs build + install-rehearse on every run and ship
-# signed on armed tags). Replaces the six retired v1 workflows. Inputs
-# live in versions.yaml (SSOT); the package manifest template lives in
-# package/package-manifest.yaml.
+# validate (structural gates + smoke + PDF compile + the per-payload
+# covenant) → publish (release + downstream dispatches) → installer
+# containers (spec 16 §7: the macOS pkg and windows MSI legs build +
+# install-rehearse on every run and ship signed on armed tags). Replaces
+# the six retired v1 workflows. Inputs live in versions.yaml (SSOT); the
+# package manifest template lives in package/package-manifest.yaml.
+#
+# The covenant gate (issue #303) is the payload-side sibling of the
+# product's benchmark covenant: ci/covenant.yaml budgets the numbers a
+# payload user feels (warm/cold dispatch, warm ISO compiles to
+# xml/html/pdf, the pressed package's byte size per triplet). The harness
+# tools/covenant-run measures the JUST-PRESSED package and emits the
+# product engine's metrics shape; the same `tebako-bench covenant`
+# machinery (built from tamatebako/tebako at the pinned toolchain release)
+# evaluates it — ENFORCED always (no continue-on-error), on PRs and tags
+# alike. TEBAKO_BENCH_INJECT rides the workflow_dispatch `inject` input —
+# the trip proof's deliberate breach.
 #
 # Both former upstream blockers are FIXED by the pins in versions.yaml:
 #  - the region-mounts gap (TEBAKO_TFS_MOUNTS bare `image:mount` pairs
@@ -32,6 +43,10 @@ on:
         description: 'metanorma payload version to pin (e.g. 1.17.0)'
         required: true
         type: string
+      inject:
+        description: 'Covenant trip proof: TEBAKO_BENCH_INJECT=<cell-or-axis>:<factor> — a deliberate breach the covenant gate must catch (the leg goes red naming the cell, proving the gate has teeth).'
+        required: false
+        default: ''
   repository_dispatch:
     types: [tebako-packages/metanorma]
 
@@ -163,7 +178,8 @@ jobs:
           set -euo pipefail
           docker run --rm \
             --env-file "$RUNNER_TEMP/pins.env" \
-            -e LEGACY -e GITHUB_WORKSPACE \
+            -e LEGACY -e GITHUB_WORKSPACE -e GITHUB_REF_NAME \
+            -e "TRIPLET=${{ matrix.triplet }}" \
             -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" \
             "${{ matrix.container }}" \
             bash tools/container_leg
@@ -699,6 +715,101 @@ jobs:
           fi
           [ "$rc" -eq 0 ] || { echo "::error::compile exited $rc"; exit "$rc"; }
           test -s document.pdf || { echo "::error::compile produced no document.pdf"; exit 1; }
+
+      # ---- the per-payload covenant gate (issue #303) --------------------
+      # The validate stage's budget arm: the harness measures the
+      # JUST-PRESSED package (cold/warm dispatch latency, warm ISO compiles
+      # to xml/html/pdf, the pressed byte size) and the product engine's
+      # own covenant machinery judges the numbers against ci/covenant.yaml
+      # (the grammar is the product's — reused, never forked). ENFORCED
+      # always (no continue-on-error): a breach reds the leg on PRs and
+      # tags alike, so a regression never ships. The engine is
+      # tamatebako/tebako's tebako-bench (CI tooling, never shipped),
+      # built from source at the pinned toolchain release with the same
+      # checkout shape benchmark.yml uses (the dwarfs-rs sibling is a
+      # manifest-only path dep — no submodules, verified). The musl legs
+      # measured inside tools/container_leg (their package executes only
+      # under musl libc); the host evaluates the metrics they hand back.
+      - name: Checkout the covenant engine (tamatebako/tebako @ the pinned toolchain release)
+        uses: actions/checkout@v4
+        with:
+          repository: tamatebako/tebako
+          ref: ${{ env.TEBAKO_RELEASE }}
+          path: gate/tebako-rs
+          fetch-depth: 1
+      - name: Checkout dwarfs-rs (the sibling path dep — manifests only)
+        uses: actions/checkout@v4
+        with:
+          repository: tamatebako/dwarfs-rs
+          path: gate/dwarfs-rs
+          fetch-depth: 1
+      - uses: dtolnay/rust-toolchain@1.94.1
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2.9.1
+        with:
+          workspaces: gate/tebako-rs
+      - name: Build the covenant engine (tebako-bench — pure Rust, never shipped)
+        shell: bash
+        working-directory: gate/tebako-rs
+        run: cargo build -p tebako-bench
+
+      - name: Covenant gate — measure + evaluate (POSIX)
+        if: runner.os != 'Windows' && matrix.container == null
+        timeout-minutes: 150
+        # --no-warmup + --skip-font-stage: the leg's own smoke/compile/PDF
+        # steps already primed the store, the exec caches, and the font
+        # set — the harness measures warm from the first sample. Samples
+        # are medians of 2 on CI (the shared-runner cost of the heavy
+        # cells); local runs default to 3 + warmup + the font stage.
+        run: |
+          set -euo pipefail
+          ruby tools/covenant-run --package "dist/$LEGACY" --triplet "${{ matrix.triplet }}" \
+            --metrics "$RUNNER_TEMP/covenant-metrics.json" --release "$GITHUB_REF_NAME" \
+            --compile-samples 2 --no-warmup --skip-font-stage
+          TEBAKO_BENCH_INJECT="${{ inputs.inject }}" \
+            gate/tebako-rs/target/debug/tebako-bench covenant \
+            --metrics "$RUNNER_TEMP/covenant-metrics.json" --covenant ci/covenant.yaml \
+            --json "$RUNNER_TEMP/covenant-verdict.json"
+
+      - name: Covenant gate — measure + evaluate (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        timeout-minutes: 150
+        # Same CI shape as the POSIX leg: --no-warmup + --skip-font-stage
+        # (the leg's own steps primed everything), medians of 2.
+        run: |
+          set -euo pipefail
+          RUNNER_TEMP=$(cygpath -u "$RUNNER_TEMP")
+          ruby tools/covenant-run --package "dist/$LEGACY" --triplet "${{ matrix.triplet }}" \
+            --metrics "$RUNNER_TEMP/covenant-metrics.json" --release "$GITHUB_REF_NAME" \
+            --compile-samples 2 --no-warmup --skip-font-stage
+          bench="$(cygpath -u "$GITHUB_WORKSPACE")/gate/tebako-rs/target/debug/tebako-bench.exe"
+          MSYS2_ARG_CONV_EXCL='*' TEBAKO_BENCH_INJECT="${{ inputs.inject }}" \
+            "$bench" covenant \
+            --metrics "$(cygpath -m "$RUNNER_TEMP/covenant-metrics.json")" \
+            --covenant "$(cygpath -m "$PWD/ci/covenant.yaml")" \
+            --json "$(cygpath -m "$RUNNER_TEMP/covenant-verdict.json")"
+
+      - name: Covenant gate — evaluate (container legs)
+        if: matrix.container != null
+        run: |
+          set -euo pipefail
+          cp dist/covenant-metrics.json "$RUNNER_TEMP/covenant-metrics.json"
+          TEBAKO_BENCH_INJECT="${{ inputs.inject }}" \
+            gate/tebako-rs/target/debug/tebako-bench covenant \
+            --metrics "$RUNNER_TEMP/covenant-metrics.json" --covenant ci/covenant.yaml \
+            --json "$RUNNER_TEMP/covenant-verdict.json"
+
+      - name: Covenant evidence
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: covenant-${{ matrix.triplet }}
+          path: |
+            ${{ runner.temp }}/covenant-metrics.json
+            ${{ runner.temp }}/covenant-verdict.json
+            dist/covenant-metrics.json
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Compile diagnostics on failure
         if: failure()
