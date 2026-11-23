@@ -1,0 +1,268 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# tools/covenant-run — the per-payload covenant harness (issue #303).
+#
+# Measures the numbers a payload user feels against a JUST-PRESSED package
+# and emits the tebako-bench MetricsFile the product engine's covenant
+# gate consumes (`tebako-bench covenant --metrics <this> --covenant
+# ci/covenant.yaml`). The metrics grammar is the product engine's own
+# (schema_version 1, a flat id → value map) — reused, never forked.
+#
+#   tools/covenant-run --package <path> --triplet <triplet> --metrics <out.json>
+#                      [--release <name>] [--samples N] [--cold-samples N]
+#                      [--compile-samples N] [--skip-font-stage] [--no-warmup]
+#                      [--only <cell-prefix,…>]
+#
+# Cells produced (the covenant in ci/covenant.yaml budgets them):
+#   dispatch.version.cold.median  — `<pkg> --version` against a FRESH
+#                                   TEBAKO_HOME per run: the
+#                                   first-run-after-install latency
+#                                   (runtime resolve + download + verify
+#                                   + boot), the lean package's one-time
+#                                   cost.
+#   dispatch.version.warm.median  — the same with the runtime cached (the
+#                                   steady-state dispatch).
+#   compile.iso_xml.warm.median   — `compile -t iso -x xml` of
+#                                   fixtures/iso-test, warm caches.
+#   compile.iso_html.warm.median  — the same to html.
+#   compile.iso_pdf.warm.median   — the same to pdf (the full fontist +
+#                                   mn2pdf/FOP pipeline on the bundled
+#                                   JRE; the harness pre-stages the public
+#                                   ISO fonts once, untimed).
+#   package.size.<triplet>        — the pressed package's byte size (the
+#                                   download a user feels).
+#
+# Warm semantics: any run that could prime a cache lands OUTSIDE the
+# measured set (an untimed warmup precedes the warm cells; the font stage
+# is untimed). Every spawn is bounded by a hard timeout — a hung child is
+# a named error, never a silent stall. A failed command fails the harness
+# (exit 1, the step reds); the harness never emits a partial metrics file
+# (tmp + rename, so a killed run leaves nothing).
+#
+# Env:
+#   TEBAKO_HOME   the warm store for the warm cells. Unset → the harness
+#                 runs all warm cells against a temp home it keeps for the
+#                 run's duration (and says so).
+#   MSYSTEM       set under msys2: native children (the package is a win32
+#                 binary) receive win32 path spellings via cygpath.
+
+require "fileutils"
+require "json"
+require "optparse"
+require "shellwords"
+require "tmpdir"
+
+def die(msg)
+  warn "covenant-run: #{msg}"
+  exit 1
+end
+
+# A failing/timed-out spawn's diagnostics: the log tail rides the error so
+# a CI leg's ::error carries the evidence, never just a path.
+def die_with_log(label, msg, log)
+  tail = File.exist?(log) ? File.readlines(log).last(30).join : "(no log)"
+  die "#{msg}\n--- #{label} log tail (#{log}) ---\n#{tail}\n---"
+end
+
+opts = {
+  samples: 5,
+  cold_samples: 3,
+  compile_samples: 3,
+  font_stage: true,
+  warmup: true,
+}
+parser = OptionParser.new do |o|
+  o.banner = "usage: tools/covenant-run --package PATH --triplet T --metrics OUT.json [options]"
+  o.on("--package PATH") { |v| opts[:package] = v }
+  o.on("--triplet T") { |v| opts[:triplet] = v }
+  o.on("--metrics OUT") { |v| opts[:metrics] = v }
+  o.on("--release NAME") { |v| opts[:release] = v }
+  o.on("--samples N", Integer) { |v| opts[:samples] = v }
+  o.on("--cold-samples N", Integer) { |v| opts[:cold_samples] = v }
+  o.on("--compile-samples N", Integer) { |v| opts[:compile_samples] = v }
+  o.on("--skip-font-stage") { opts[:font_stage] = false }
+  o.on("--no-warmup", "skip the untimed warmup runs (the caller's store is already warm — the CI legs' own smoke/compile steps primed it)") { opts[:warmup] = false }
+  o.on("--only CELLS", "comma-separated cell-id prefixes to measure (default: all); the metrics file then carries only those cells") do |v|
+    opts[:only] = v.split(",").map(&:strip).reject(&:empty?)
+  end
+end
+parser.parse!(ARGV)
+
+%i[package triplet metrics].each { |k| die "--#{k} is required (#{parser.banner})" if opts[k].nil? }
+package = File.expand_path(opts[:package])
+die "package #{package} does not exist" unless File.file?(package)
+[opts[:samples], opts[:cold_samples], opts[:compile_samples]].each do |n|
+  die "sample counts must be >= 1" if n < 1
+end
+
+WINDOWS = !!(RUBY_PLATFORM =~ /mingw|mswin|msys/)
+EXE = WINDOWS ? ".exe" : ""
+ROOT = File.expand_path("..", __dir__)
+FIXTURE = File.join(ROOT, "fixtures", "iso-test")
+die "fixture #{FIXTURE} missing" unless File.directory?(FIXTURE)
+
+# Native children receive win32 spellings under msys2 (their own argv/env
+# conversion is switched off per spawn via MSYS2_ARG_CONV_EXCL).
+def winpath(p)
+  WINDOWS ? `cygpath -m #{p.shellescape}`.strip : p
+end
+
+def median(values)
+  s = values.sort
+  n = s.length
+  n.odd? ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) / 2.0
+end
+
+LOG_DIR = Dir.mktmpdir("covenant-logs")
+
+# Spawn argv, wall-timed, output to a log; bounded by a hard timeout.
+# Returns the seconds; a non-zero exit or a timeout is a named error.
+def run_timed(label, argv, timeout:, env: {}, chdir: nil)
+  log = File.join(LOG_DIR, "#{label}.log")
+  FileUtils.mkdir_p(File.dirname(log))
+  child_env = env.merge("MSYS2_ARG_CONV_EXCL" => "*")
+  args = argv.dup
+  args[0] = winpath(args[0]) if WINDOWS
+  spawn_opts = { out: log, err: [:child, :out] }
+  spawn_opts[:chdir] = chdir if chdir
+  t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  pid = spawn(child_env, *args, spawn_opts)
+  deadline = t0 + timeout
+  status = nil
+  loop do
+    status = Process.wait2(pid, Process::WNOHANG)&.last
+    break if status
+    if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      begin
+        Process.kill("TERM", pid)
+        sleep 5
+        Process.kill("KILL", pid)
+      rescue Errno::ESRCH
+        nil
+      end
+      Process.wait2(pid)
+      die_with_log(label, "#{label} TIMED OUT after #{timeout}s", log)
+    end
+    sleep 0.05
+  end
+  wall = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0
+  die_with_log(label, "#{label} exited #{status.exitstatus}", log) unless status.success?
+  wall
+end
+
+def measure(label, count, warmup: false, &block)
+  block.call("warmup") if warmup
+  values = count.times.map do |i|
+    wall = block.call("sample#{i + 1}")
+    puts format("  %s #%d: %.3f s", label, i + 1, wall)
+    wall
+  end
+  med = median(values)
+  puts format("  %s median: %.3f s (n=%d)", label, med, values.length)
+  med
+end
+
+metrics = {}
+puts "covenant-run: package=#{package}"
+puts "covenant-run: triplet=#{opts[:triplet]} size=#{File.size(package)} bytes"
+
+# --only narrows the run to the named cells (prefix match); the metrics
+# file then carries only those cells (an unmeasured cell reads absent at
+# the gate — the honest coverage gap, never a false red).
+only = opts[:only]
+want = lambda do |id|
+  only.nil? || only.any? { |p| id == p || id.start_with?("#{p}.") }
+end
+puts "covenant-run: --only #{only.join(", ")}" if only
+
+# -- the size cell: the pressed package's byte size ----------------------
+size_id = "package.size.#{opts[:triplet]}"
+metrics[size_id] = File.size(package).to_f if want.call(size_id)
+
+# -- dispatch cells -------------------------------------------------------
+need_warm = %w[dispatch.version.warm.median compile].any? { |p| want.call(p) } ||
+            %w[xml html pdf].any? { |e| want.call("compile.iso_#{e}") }
+warm_env = {}
+if need_warm
+  warm_home = ENV["TEBAKO_HOME"]
+  if warm_home.nil? || warm_home.empty?
+    warm_home = Dir.mktmpdir("covenant-tebako-home")
+    puts "covenant-run: TEBAKO_HOME unset — warm cells ride #{warm_home}"
+  end
+  warm_env = { "TEBAKO_HOME" => winpath(warm_home) }
+end
+
+# The warmup lands the runtime download OUTSIDE the measured warm set.
+if want.call("dispatch.version.warm.median")
+  metrics["dispatch.version.warm.median"] = measure("dispatch.version.warm", opts[:samples], warmup: opts[:warmup]) do |tag|
+    run_timed("dispatch-warm-#{tag}", [package, "--version"], timeout: 600, env: warm_env)
+  end
+end
+
+# Cold: each sample boots against a FRESH TEBAKO_HOME — the runtime
+# resolve + download + verify + boot a user feels once after install.
+if want.call("dispatch.version.cold.median")
+  metrics["dispatch.version.cold.median"] = measure("dispatch.version.cold", opts[:cold_samples]) do |tag|
+    wall = nil
+    Dir.mktmpdir("covenant-cold-home") do |home|
+      wall = run_timed("dispatch-cold-#{tag}", [package, "--version"], timeout: 900,
+                       env: { "TEBAKO_HOME" => winpath(home) })
+    end
+    wall
+  end
+end
+
+# -- compile cells --------------------------------------------------------
+compile_wanted = %w[xml html pdf].any? { |e| want.call("compile.iso_#{e}.warm.median") || want.call("compile") }
+# The pdf cell's font pipeline reads the host ~/.fontist cache. Stage the
+# public ISO fonts ONCE through the payload's own argv0 fontist dispatch
+# (the workflow's proven route), untimed, so no measured compile pays a
+# download burst. xml/html never resolve font locations; the stage keeps
+# the three cells on the same warm footing.
+if opts[:font_stage] && compile_wanted
+  puts "covenant-run: staging the ISO font set (untimed)"
+  Dir.mktmpdir("covenant-fontist") do |dir|
+    fontist = File.join(dir, "fontist#{EXE}")
+    FileUtils.cp(package, fontist)
+    FileUtils.chmod(0o755, fontist)
+    ["Inter", "Source Han Sans", "Cambria", "Times New Roman"].each do |font|
+      run_timed("fontist-#{font.tr(' ', '-')}", [fontist, "install", font], timeout: 900)
+    end
+  end
+  # fontist#554: a burst of installs can leave the adopted index partial
+  # (the 60 s adoption window); delete it so the compile re-globs the
+  # complete tree. Mirrors build.yml's PDF leg.
+  Dir.glob(File.join(Dir.home, ".fontist", "system_index.*_family.yml")).each do |idx|
+    FileUtils.rm_f(idx)
+  end
+end
+
+%w[xml html pdf].each do |ext|
+  id = "compile.iso_#{ext}.warm.median"
+  next unless want.call(id) || want.call("compile")
+  timeout = ext == "pdf" ? 1500 : 780
+  metrics[id] = measure("compile.iso_#{ext}.warm", opts[:compile_samples], warmup: opts[:warmup]) do |tag|
+    wall = nil
+    Dir.mktmpdir("covenant-compile-#{ext}") do |dir|
+      FileUtils.cp_r(Dir.glob(File.join(FIXTURE, "*")), dir)
+      wall = run_timed("compile-#{ext}-#{tag}",
+                       [package, "compile", "-t", "iso", "-x", ext, "--agree-to-terms", "document.adoc"],
+                       timeout: timeout, env: warm_env, chdir: dir)
+      out = File.join(dir, "document.#{ext}")
+      die "compile.iso_#{ext} #{tag} produced no document.#{ext}" unless File.size?(out)
+    end
+    wall
+  end
+end
+
+# -- the metrics file (tmp + rename: a killed run leaves nothing) --------
+doc = { schema_version: 1 }
+doc[:release] = opts[:release] if opts[:release]
+doc[:metrics] = metrics
+FileUtils.mkdir_p(File.dirname(File.expand_path(opts[:metrics])))
+tmp = "#{opts[:metrics]}.tmp.#{$$}"
+File.write(tmp, JSON.pretty_generate(doc) + "\n")
+File.rename(tmp, opts[:metrics])
+puts "covenant-run: wrote #{opts[:metrics]}"
+metrics.each { |id, v| puts format("  %-40s %.3f", id, v) }

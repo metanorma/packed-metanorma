@@ -1,0 +1,108 @@
+# The per-payload covenant (issue #303) — the metanorma payload's own
+# budgets: the numbers a payload user feels, gated on EVERY build (PRs and
+# tags alike) by the same `tebako-bench covenant` machinery that gates
+# tebako releases. The grammar is the product's spec 27 §11 covenant
+# grammar — reused, never forked; the engine is built from
+# tamatebako/tebako at the pinned toolchain release.
+#
+# Unlike the product covenant's sourced cells (derived from bench
+# dashboards), these cells are DIRECT: tools/covenant-run measures the
+# just-pressed package and emits the metrics the engine judges (a cell
+# here therefore carries no `source:` — the harness is the producer). An
+# `absent` verdict is a coverage gap — reported loudly, never a false
+# red; each leg produces only its own triplet's size cell, so the other
+# six size cells read absent on every leg by design.
+#
+# Calibration (2026-11-23): the timings were measured against the
+# PUBLISHED v1.18.7.pre.20261118 package on an aarch64-macos host, and the
+# fleet's spread comes from the tag build itself (run 44553838241, green)
+# — cited per cell. Bounds carry ~1.5x the healthy worst (dispatch cells
+# more, for the WAN download they ride), so a slow shared runner never
+# false-trips: the gate trips on regressions, not on fleet noise. The
+# pressed sizes are run 44553838241's per-leg numbers. The compile bounds
+# cover the fleet's SLOWEST healthy class (the macOS legs, whose shared
+# runners ran the same-class compile steps at 780-1543 s); per-class
+# refinement is follow-up work once the fleet's own covenant numbers
+# exist.
+schema_version: 1
+cells:
+  # -- dispatch: the wrapper + runtime-resolution + boot latency of
+  # `metanorma --version`, the number a user feels at every invocation
+  # (warm) and once after install (cold — a fresh TEBAKO_HOME, so the
+  # lean package's runtime resolve + download + verify rides inside).
+  - id: dispatch.version.warm.median
+    bound: 30.0
+    comparison: le
+    unit: s
+    note: median of 5 warm `--version` runs; measured 13.6 s median / 15.8 s worst (aarch64-macos host, 2026-11-23) — bound ~1.9x worst; CI smoke legs confirm dispatch is not a slow-class number (27-28 s COLD including the runtime download, run 44553838241)
+  - id: dispatch.version.cold.median
+    bound: 90.0
+    comparison: le
+    unit: s
+    note: median of 3 `--version` runs each against a FRESH TEBAKO_HOME; measured 26.8 s median / 34.5 s worst (aarch64-macos host, 2026-11-23 — the 66 MB runtime download rides inside) — bound ~2.6x worst absorbs WAN variance on shared egress
+
+  # -- compile: the ISO fixture (fixtures/iso-test) to each output, warm
+  # caches. Local medians on the aarch64-macos host (2026-11-23): xml
+  # 38.2 s (worst 56.0), pdf 39.2 s (worst 62.2). The fleet's slowest
+  # healthy class sets the bound: the macOS legs of run 44553838241 ran
+  # the same-class OIML xml+html compile step at 780-781 s and the ISO
+  # pdf step (font downloads inside) at 1513-1543 s on shared MacCloud
+  # runners — the bounds are ~1.5x those healthy worsts, so the cells
+  # trip on hang-class regressions and never on fleet noise.
+  - id: compile.iso_xml.warm.median
+    bound: 1200.0
+    comparison: le
+    unit: s
+    note: local median 38.2 s (worst 56.0 s, 2026-11-23); bound is ~1.5x the fleet's healthy worst 781 s for the same-class compile (macOS legs, run 44553838241) — recalibrate per class once fleet covenant numbers exist
+  - id: compile.iso_html.warm.median
+    bound: 1200.0
+    comparison: le
+    unit: s
+    note: no local measurement — on macOS 14.1.1 (darwin 23B81) the sass-embedded dart-sass child dies at spawn inside the packed runtime (EOFError in sass/compiler/connection.rb; reproduce with `compile -t iso -x html` on the published v1.18.7.pre.20261118 darwin-arm64 package — exit 1 with document.err.html) while the same sass path runs green on CI macos-15 (run 44553838241's OIML leg) — bound estimated from the xml cell's numbers pending the first fleet runs
+  - id: compile.iso_pdf.warm.median
+    bound: 2400.0
+    comparison: le
+    unit: s
+    note: local median 39.2 s warm (worst 62.2 s, 2026-11-23); the fleet's healthy worst pdf step took 1543 s INCLUDING the first-run font downloads (x86_64-macos, run 44553838241) — the covenant's pdf runs font-warm; bound is ~1.5x the observed healthy worst
+
+  # -- size: the pressed package's byte size per triplet (the download a
+  # user feels). Bounds are ~1.5x the v1.18.7.pre.20261118 pressed sizes
+  # (tag build run 44553838241; the macOS legs measure the re-signed
+  # bytes), a bloat ceiling that trips on structural accidents (a
+  # duplicated slot, an accidental fat composition), never on ordinary
+  # payload drift.
+  - id: package.size.aarch64-macos
+    bound: 810000000
+    comparison: le
+    unit: bytes
+    note: measured 534629104 (the shipped, re-signed bytes; run 44553838241's leg pressed 530466538 pre-sign) — bound ~1.5x
+  - id: package.size.x86_64-macos
+    bound: 790000000
+    comparison: le
+    unit: bytes
+    note: measured 518704262 pre-sign (run 44553838241; the leg measures the re-signed bytes, +~4.2 MB) — bound ~1.5x
+  - id: package.size.x86_64-linux-gnu
+    bound: 1110000000
+    comparison: le
+    unit: bytes
+    note: measured 739265956 (run 44553838241) — bound ~1.5x
+  - id: package.size.aarch64-linux-gnu
+    bound: 1100000000
+    comparison: le
+    unit: bytes
+    note: measured 730944791 (run 44553838241) — bound ~1.5x
+  - id: package.size.x86_64-linux-musl
+    bound: 1080000000
+    comparison: le
+    unit: bytes
+    note: measured 714146462 (run 44553838241) — bound ~1.5x
+  - id: package.size.aarch64-linux-musl
+    bound: 1060000000
+    comparison: le
+    unit: bytes
+    note: measured 702863667 (run 44553838241) — bound ~1.5x
+  - id: package.size.x86_64-windows-ucrt
+    bound: 890000000
+    comparison: le
+    unit: bytes
+    note: measured 592981930 (run 44553838241) — bound ~1.5x
