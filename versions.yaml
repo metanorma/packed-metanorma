@@ -122,7 +122,7 @@ package:
   # The user-facing version = the metanorma payload version (the release
   # tag is v<this>). The composition's truth lives in the L2 package
   # manifest + the release's SHA256SUMS, not in an invented composite.
-  version: 1.18.7.pre.20261121
+  version: 1.18.7
 
 # The installer containers (spec 16 §7): the product also ships as a
 # system pkg (macOS) and MSI (windows), built by tamatebako/tebako's ci
@@ -161,29 +161,29 @@ installers:
 payloads:
   - name: metanorma
     version: 1.17.0 # the slice version (lock.slices[].version)
-    release: 1.18.7.pre.20261121-1 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
+    release: 1.18.7-1 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
     assets:
       aarch64-macos:
-        file: metanorma-1.18.7.pre.20261121-macos-arm64.tfs
-        sha256: 38abcb2d53b641cac7d702b51784dab7b5dd82cd9e8cc14038e6719075940e0c
+        file: metanorma-1.18.7-macos-arm64.tfs
+        sha256: 9396d0b4d7e5e8f3e6e2a0740f10fdc29fb28845e99a77b241016a4cdec8965b
       x86_64-linux-gnu:
-        file: metanorma-1.18.7.pre.20261121-linux-gnu-x86_64.tfs
-        sha256: 01577bea2ad695e2689b7bc29b0c664612347139b88ffd3cb44b50742d969a48
+        file: metanorma-1.18.7-linux-gnu-x86_64.tfs
+        sha256: 96ef030902678ea665738451f36e41b5633cb5907ca6aa1d36fc190a1f2af641
       x86_64-windows-ucrt:
-        file: metanorma-1.18.7.pre.20261121-windows-ucrt64.tfs
-        sha256: f4e0c29c79aab010de49351b57c4ab7fa6d9852dfdebeefdc07a8316fd992eca
+        file: metanorma-1.18.7-windows-ucrt64.tfs
+        sha256: d6b1d23ed2cf96dfbb4997a70f20a91c0abe381f5128572db16f777c11e50dbd
       x86_64-linux-musl:
-        file: metanorma-1.18.7.pre.20261121-linux-musl-x86_64.tfs
-        sha256: 4f62860c1e7f996ca13aab8dd0719dbab1a49203ebd17d0f5dea4c5c84b2814c
+        file: metanorma-1.18.7-linux-musl-x86_64.tfs
+        sha256: 4bcadde92fecd07f6a4d9d9bd090b4e7a0a6cb019e0f6e7c7071bf780a4d1061
       aarch64-linux-musl:
-        file: metanorma-1.18.7.pre.20261121-linux-musl-arm64.tfs
-        sha256: 0b6db5f656b6a6b06674c9dac614821f11b9899f0952abe57ae8c969e00fa306
+        file: metanorma-1.18.7-linux-musl-arm64.tfs
+        sha256: 94e0d52d11c6ad1e8414a708d8d1dd1eb9674543ceb4c49599e2e4c7850756d3
       x86_64-macos:
-        file: metanorma-1.18.7.pre.20261121-macos-x86_64.tfs
-        sha256: fd11e22c61647ccd4dc510380b1e7eb257fff19cdb60053d3d22c644af65a23d
+        file: metanorma-1.18.7-macos-x86_64.tfs
+        sha256: e9a8bf755dd4fb0891e157cf03c99db9c540b1b628ada95c04472c2d22ffc3c5
       aarch64-linux-gnu:
-        file: metanorma-1.18.7.pre.20261121-linux-gnu-arm64.tfs
-        sha256: 396e12afab44970c83cb3c7d41f2ed6064aea5bf4dbccb29796b72cbce7c1558
+        file: metanorma-1.18.7-linux-gnu-arm64.tfs
+        sha256: 4d13286ca2364f8592271ed85efd95686c4f043fc1a10558de2746756c16dbf7
   - name: openjdk
     # openjdk is a RUNTIME-kind payload: the feedstock release names the
     # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
