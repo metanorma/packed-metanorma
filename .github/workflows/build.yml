@@ -1388,7 +1388,13 @@ jobs:
       # compiles a real document, and the named-error paths hold).
       - name: Install rehearsal (msiexec round-trip + the seed's effects + compile smoke)
         shell: pwsh
-        timeout-minutes: 30
+        # 90 min: the rehearsal installs, checks the seed's effects, and
+        # compiles the OIML fixture through the installed shim with COLD
+        # relaton and font caches on a two-core runner. The 2026-11-23
+        # run timed out at 30 with the smoke still in cold-cache network
+        # fetches; the macOS pkg rehearsal runs uncapped, so this leg was
+        # the only one squeezed. 90 gives 3x the observed fail point.
+        timeout-minutes: 90
         run: |
           $ErrorActionPreference = 'Stop'
           $msi = @(Get-ChildItem -Path 'tebako-ci/out' -Filter '*.msi' -File)
