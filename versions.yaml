@@ -161,29 +161,29 @@ installers:
 payloads:
   - name: metanorma
     version: 1.17.0 # the slice version (lock.slices[].version)
-    release: 1.18.7.pre.20261121-1 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
+    release: 1.18.7.pre.20261121-3 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
     assets:
       aarch64-macos:
         file: metanorma-1.18.7.pre.20261121-macos-arm64.tfs
-        sha256: 38abcb2d53b641cac7d702b51784dab7b5dd82cd9e8cc14038e6719075940e0c
+        sha256: ceab18babbc367bb91de205dd5c37fb1214ce5b541904cd8cee7f141f48c52a1
       x86_64-linux-gnu:
         file: metanorma-1.18.7.pre.20261121-linux-gnu-x86_64.tfs
-        sha256: 01577bea2ad695e2689b7bc29b0c664612347139b88ffd3cb44b50742d969a48
+        sha256: 6bd341d35479fe8a2f7a6fbfd052ab24f9e45736cd9178b105e5511fc5ec8695
       x86_64-windows-ucrt:
         file: metanorma-1.18.7.pre.20261121-windows-ucrt64.tfs
-        sha256: f4e0c29c79aab010de49351b57c4ab7fa6d9852dfdebeefdc07a8316fd992eca
+        sha256: 5049f333cf97e60871337fc372230bc90301d69e7f05aabb00b807958686bdfa
       x86_64-linux-musl:
         file: metanorma-1.18.7.pre.20261121-linux-musl-x86_64.tfs
-        sha256: 4f62860c1e7f996ca13aab8dd0719dbab1a49203ebd17d0f5dea4c5c84b2814c
+        sha256: 75271e888aa44d48eb4873eab44385cc962c139768c4d2874760f0ac50d8372d
       aarch64-linux-musl:
         file: metanorma-1.18.7.pre.20261121-linux-musl-arm64.tfs
-        sha256: 0b6db5f656b6a6b06674c9dac614821f11b9899f0952abe57ae8c969e00fa306
+        sha256: 909639d07a9f98c4e8982108e6b4cc630097f6a145dc9e4d4516404ba9bf0c8d
       x86_64-macos:
         file: metanorma-1.18.7.pre.20261121-macos-x86_64.tfs
-        sha256: fd11e22c61647ccd4dc510380b1e7eb257fff19cdb60053d3d22c644af65a23d
+        sha256: 874fbbb7a0f69e36fe7300f32f198401805f0f624d62982db7e215a53b2a9461
       aarch64-linux-gnu:
         file: metanorma-1.18.7.pre.20261121-linux-gnu-arm64.tfs
-        sha256: 396e12afab44970c83cb3c7d41f2ed6064aea5bf4dbccb29796b72cbce7c1558
+        sha256: c0b7b5f05a2ae4491476e046aab9d65d2705a7d89d94c593289593516a828ddb
   - name: openjdk
     # openjdk is a RUNTIME-kind payload: the feedstock release names the
     # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
