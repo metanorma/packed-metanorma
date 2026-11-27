@@ -161,29 +161,29 @@ installers:
 payloads:
   - name: metanorma
     version: 1.17.0 # the slice version (lock.slices[].version)
-    release: 1.18.7-1 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
+    release: 1.18.7-2 # tebako-packages/metanorma tag (see Deviations: not "1.17.0")
     assets:
       aarch64-macos:
         file: metanorma-1.18.7-macos-arm64.tfs
-        sha256: 9396d0b4d7e5e8f3e6e2a0740f10fdc29fb28845e99a77b241016a4cdec8965b
+        sha256: ea35a0c292d3221b9d38a21c469d9248200ff562b1f4cf4c597f5c479f8fa147
       x86_64-linux-gnu:
         file: metanorma-1.18.7-linux-gnu-x86_64.tfs
-        sha256: 96ef030902678ea665738451f36e41b5633cb5907ca6aa1d36fc190a1f2af641
+        sha256: 2ccc4f56a0cc268fab107acbc5cbb3b41921c691dc24323042cab4830c418b67
       x86_64-windows-ucrt:
         file: metanorma-1.18.7-windows-ucrt64.tfs
-        sha256: d6b1d23ed2cf96dfbb4997a70f20a91c0abe381f5128572db16f777c11e50dbd
+        sha256: 9171b2ffa3946f83ad6d55e333aa3310f87b137c3cd59ce7f498fb322d264815
       x86_64-linux-musl:
         file: metanorma-1.18.7-linux-musl-x86_64.tfs
-        sha256: 4bcadde92fecd07f6a4d9d9bd090b4e7a0a6cb019e0f6e7c7071bf780a4d1061
+        sha256: e887ad970de0d18ab8a653df9d735302129727151d9e4e5946a743fab721901f
       aarch64-linux-musl:
         file: metanorma-1.18.7-linux-musl-arm64.tfs
-        sha256: 94e0d52d11c6ad1e8414a708d8d1dd1eb9674543ceb4c49599e2e4c7850756d3
+        sha256: 5cd3d27881feeba9937c66dc8189b0a761e04aba5fd9234ae9bb2273dfe4253b
       x86_64-macos:
         file: metanorma-1.18.7-macos-x86_64.tfs
-        sha256: e9a8bf755dd4fb0891e157cf03c99db9c540b1b628ada95c04472c2d22ffc3c5
+        sha256: 301ecc03b18d89c4eda9eee737ea492070cc25cb0de78732f371582a1d4986b6
       aarch64-linux-gnu:
         file: metanorma-1.18.7-linux-gnu-arm64.tfs
-        sha256: 4d13286ca2364f8592271ed85efd95686c4f043fc1a10558de2746756c16dbf7
+        sha256: 71ec12cfd227d029749a3aaa0390451dc07515b6e46b428bf0ee607e414a8c59
   - name: openjdk
     # openjdk is a RUNTIME-kind payload: the feedstock release names the
     # assets to the runtime grammar (tebako-runtime-<tools>-<ver>-*).
