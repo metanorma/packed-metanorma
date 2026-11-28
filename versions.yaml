@@ -155,7 +155,7 @@ installers:
   # shared CI egress) plus SEED_BUDGET (the v1.18.6-2 arm64 leg burned the
   # 1800s default mid-install — run 44276073858) — riding tebako#1086's
   # productsign retry line.
-  installer_ref: 654c46e1c382dc12bb7be15197c3547162e757d0
+  installer_ref: 97addce3d572166759b3d0dfc2f469660b976bfb
   # The MSI UpgradeCode — LOCKED FOREVER (MSI upgrades pair on it). Minted
   # 2026-09-15 for this product line; never reuse tebako's own GUID. Only
   # the MSI leg consumes it.
